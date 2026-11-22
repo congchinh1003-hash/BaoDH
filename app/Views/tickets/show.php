@@ -2645,12 +2645,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Step 1: Send request to PHP
             fetch('<?= $baseUrl ?>/remote-support/vnc/request', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
                 body: JSON.stringify({
                     ticket_id: <?= (int)$ticket['id'] ?>,
                     ws_url: 'http://127.0.0.1:6080/vnc_lite.html',
                     session_pass: '123456',
-                    _csrf_token: '<?= csrf_token() ?>'
+                    _csrf_token: '<?= \App\Core\Session::csrfToken() ?>'
                 })
             })
             .then(res => res.json())
@@ -2720,8 +2720,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (vncSessionId) {
                 fetch('<?= $baseUrl ?>/remote-support/vnc/end', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
-                    body: JSON.stringify({ session_id: vncSessionId, _csrf_token: '<?= csrf_token() ?>' })
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
+                    body: JSON.stringify({ session_id: vncSessionId, _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
                 });
             }
             document.getElementById('itNovncFrame').src = 'about:blank';

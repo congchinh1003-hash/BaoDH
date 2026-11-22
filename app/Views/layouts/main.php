@@ -963,8 +963,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!currentVncSessionId) return;
             fetch(baseUrl + '/remote-support/vnc/respond', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
-                body: JSON.stringify({ session_id: currentVncSessionId, action: 'accept', _csrf_token: '<?= csrf_token() ?>' })
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
+                body: JSON.stringify({ session_id: currentVncSessionId, action: 'accept', _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
             }).then(() => {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
                 if (modal) modal.hide();
@@ -977,8 +977,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!currentVncSessionId) return;
             fetch(baseUrl + '/remote-support/vnc/respond', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
-                body: JSON.stringify({ session_id: currentVncSessionId, action: 'reject', _csrf_token: '<?= csrf_token() ?>' })
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
+                body: JSON.stringify({ session_id: currentVncSessionId, action: 'reject', _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
             }).then(() => {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
                 if (modal) modal.hide();
@@ -1005,8 +1005,8 @@ document.addEventListener('DOMContentLoaded', function() {
     window.endVncSession = function(sessId) {
         fetch(baseUrl + '/remote-support/vnc/end', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
-            body: JSON.stringify({ session_id: sessId, _csrf_token: '<?= csrf_token() ?>' })
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
+            body: JSON.stringify({ session_id: sessId, _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
         }).then(() => {
             const bar = document.getElementById('vncActiveFloatingBar');
             if (bar) bar.remove();
