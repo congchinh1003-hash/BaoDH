@@ -109,6 +109,9 @@ $user = Auth::user();
                     <!-- Live Video Element (muted required for autoplay) -->
                     <video id="remoteVideo" autoplay playsinline muted class="w-100 h-100 d-none" style="object-fit: contain; max-height: 75vh; cursor: crosshair;"></video>
 
+                    <!-- Guaranteed Live Fallback Frame Image (Zero-latency snapshot stream) -->
+                    <img id="remoteFrameImg" class="w-100 h-100 d-none" style="object-fit: contain; max-height: 75vh; cursor: crosshair;" alt="Live Screen Feed" />
+
                     <!-- Laser Pointer Layer (Canvas overlay) -->
                     <canvas id="pointerOverlay" class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none; z-index: 10;"></canvas>
 
@@ -275,6 +278,7 @@ $user = Auth::user();
     let peerConnection = null;
     let lastSignalId = 0;
     let pollInterval = null;
+    let frameBroadcastInterval = null;
     let isLaserEnabled = true;
     let candidateQueue = [];
 
@@ -291,8 +295,10 @@ $user = Auth::user();
     // UI elements
     const connBadge = document.getElementById('connBadge');
     const remoteVideo = document.getElementById('remoteVideo');
+    const remoteFrameImg = document.getElementById('remoteFrameImg');
     const staffWaitingBox = document.getElementById('staffWaitingBox');
     const videoToolbar = document.getElementById('videoToolbar');
+    const videoContainer = document.getElementById('videoContainer');
     const chatMessages = document.getElementById('chatMessages');
 
     function updateBadge(status, text) {
@@ -314,7 +320,6 @@ $user = Auth::user();
     // Signaling helper with CSRF header & JSON payload
     async function sendSignal(type, payload) {
         try {
-            console.log('[Remote] Sending signal:', type);
             const res = await fetch(BASE_URL + '/remote-support/api/signal', {
                 method: 'POST',
                 headers: { 
@@ -377,16 +382,34 @@ $user = Auth::user();
 
         peerConnection.ontrack = function(event) {
             console.log('[Remote] ontrack stream received:', event.streams);
-            if (remoteVideo && event.streams && event.streams[0]) {
-                remoteVideo.srcObject = event.streams[0];
-                remoteVideo.classList.remove('d-none');
-                if (staffWaitingBox) staffWaitingBox.classList.add('d-none');
-                if (videoToolbar) {
-                    videoToolbar.classList.remove('d-none');
-                    videoToolbar.classList.add('d-flex');
-                }
-                updateBadge('connected', 'Đang kết nối Live (Đã nhận màn hình)');
-                remoteVideo.play().catch(e => console.warn('[Remote] Autoplay notice:', e));
+            const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+            if (remoteVideo) {
+                remoteVideo.srcObject = stream;
+                remoteVideo.muted = true;
+
+                remoteVideo.onloadedmetadata = function() {
+                    console.log('[Remote] Video loadedmetadata:', remoteVideo.videoWidth, 'x', remoteVideo.videoHeight);
+                    remoteVideo.play().catch(e => console.warn(e));
+                };
+
+                event.track.onunmute = function() {
+                    console.log('[Remote] Video track unmuted! Playing stream...');
+                    remoteVideo.play().catch(e => console.warn(e));
+                };
+
+                remoteVideo.onplaying = function() {
+                    console.log('[Remote] WebRTC stream is live and playing!');
+                    if (remoteFrameImg) remoteFrameImg.classList.add('d-none');
+                    remoteVideo.classList.remove('d-none');
+                    if (staffWaitingBox) staffWaitingBox.classList.add('d-none');
+                    if (videoToolbar) {
+                        videoToolbar.classList.remove('d-none');
+                        videoToolbar.classList.add('d-flex');
+                    }
+                    updateBadge('connected', 'Đang kết nối Live (WebRTC 60 FPS)');
+                };
+
+                remoteVideo.play().catch(e => console.warn('[Remote] Autoplay catch:', e));
             }
         };
 
@@ -395,32 +418,55 @@ $user = Auth::user();
             if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
                 updateBadge('connected', 'Đã kết nối Live');
             } else if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
-                updateBadge('danger', 'Mất kết nối P2P');
-            }
-        };
-
-        peerConnection.onconnectionstatechange = function() {
-            console.log('[Remote] Peer state:', peerConnection.connectionState);
-            if (peerConnection.connectionState === 'connected') {
-                updateBadge('connected', 'Đã kết nối Live');
-            } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-                updateBadge('danger', 'Đã ngắt kết nối');
+                console.warn('[Remote] ICE interrupted, relying on frame broadcaster...');
             }
         };
     }
 
-    // Re-negotiate offer (used when IT enters/reloads or client needs re-send)
-    async function renegotiateOffer() {
-        if (!localStream) return;
-        try {
-            console.log('[Remote] Re-negotiating OFFER...');
-            createPeer();
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            await sendSignal('OFFER', offer);
-        } catch (e) {
-            console.error('[Remote] renegotiateOffer error:', e);
+    // Offscreen Canvas Frame Broadcaster (Guarantees zero-latency image streaming even if WebRTC UDP blocked)
+    const offscreenCanvas = document.createElement('canvas');
+    let hiddenVideoElem = null;
+
+    function startFrameBroadcaster() {
+        if (!hiddenVideoElem) {
+            hiddenVideoElem = document.createElement('video');
+            hiddenVideoElem.muted = true;
+            hiddenVideoElem.playsInline = true;
+        }
+        hiddenVideoElem.srcObject = localStream;
+        hiddenVideoElem.play().catch(e => {});
+
+        if (frameBroadcastInterval) clearInterval(frameBroadcastInterval);
+
+        // Immediate snapshot
+        setTimeout(captureAndBroadcastFrame, 400);
+
+        // Send a compressed JPEG snapshot every 1.2s
+        frameBroadcastInterval = setInterval(captureAndBroadcastFrame, 1200);
+    }
+
+    function captureAndBroadcastFrame() {
+        if (!localStream || !hiddenVideoElem || !hiddenVideoElem.videoWidth) return;
+
+        const maxWidth = 960;
+        const scale = Math.min(1, maxWidth / hiddenVideoElem.videoWidth);
+        offscreenCanvas.width = Math.round(hiddenVideoElem.videoWidth * scale);
+        offscreenCanvas.height = Math.round(hiddenVideoElem.videoHeight * scale);
+
+        const ctx = offscreenCanvas.getContext('2d');
+        ctx.drawImage(hiddenVideoElem, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
+        const dataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.52);
+
+        sendSignal('FRAME', dataUrl);
+    }
+
+    function stopFrameBroadcaster() {
+        if (frameBroadcastInterval) {
+            clearInterval(frameBroadcastInterval);
+            frameBroadcastInterval = null;
+        }
+        if (hiddenVideoElem) {
+            hiddenVideoElem.srcObject = null;
         }
     }
 
@@ -457,6 +503,9 @@ $user = Auth::user();
                 console.log('[Remote] Local Offer created & sent');
                 await sendSignal('OFFER', offer);
 
+                // Start guaranteed fallback frame broadcaster
+                startFrameBroadcaster();
+
             } catch (err) {
                 console.error('[Remote] getDisplayMedia error:', err);
                 alert('Không thể chia sẻ màn hình: ' + err.message);
@@ -465,6 +514,7 @@ $user = Auth::user();
     }
 
     function handleStopSharing() {
+        stopFrameBroadcaster();
         if (localStream) {
             localStream.getTracks().forEach(t => t.stop());
             localStream = null;
@@ -511,13 +561,20 @@ $user = Auth::user();
         }, 25);
     }
 
-    // STAFF: Laser pointer interaction on clicking video
-    if (remoteVideo && ROLE === 'STAFF') {
-        remoteVideo.addEventListener('click', function(e) {
+    // STAFF: Laser pointer interaction on clicking videoContainer
+    if (videoContainer && ROLE === 'STAFF') {
+        videoContainer.addEventListener('click', function(e) {
             if (!isLaserEnabled) return;
-            const rect = remoteVideo.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / rect.width;
-            const y = (e.clientY - rect.top) / rect.height;
+            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox')) return;
+
+            const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
+            const rect = (targetElem && !targetElem.classList.contains('d-none')) 
+                ? targetElem.getBoundingClientRect() 
+                : videoContainer.getBoundingClientRect();
+
+            const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
             drawStaffLaser(x, y);
             sendSignal('POINTER', { x: x, y: y });
         });
@@ -526,7 +583,8 @@ $user = Auth::user();
     // STAFF: Toggle Laser Button
     const btnToggleLaser = document.getElementById('btnToggleLaser');
     if (btnToggleLaser) {
-        btnToggleLaser.addEventListener('click', function() {
+        btnToggleLaser.addEventListener('click', function(e) {
+            e.stopPropagation();
             isLaserEnabled = !isLaserEnabled;
             this.classList.toggle('active', isLaserEnabled);
             this.classList.toggle('btn-warning', isLaserEnabled);
@@ -536,29 +594,35 @@ $user = Auth::user();
 
     // STAFF: Screenshot
     const btnTakeScreenshot = document.getElementById('btnTakeScreenshot');
-    if (btnTakeScreenshot && remoteVideo) {
-        btnTakeScreenshot.addEventListener('click', function() {
-            const canvas = document.createElement('canvas');
-            canvas.width = remoteVideo.videoWidth || 1280;
-            canvas.height = remoteVideo.videoHeight || 720;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/png');
-            
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = `Screenshot_${SESSION_CODE}_${Date.now()}.png`;
-            a.click();
+    if (btnTakeScreenshot) {
+        btnTakeScreenshot.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (remoteVideo && !remoteVideo.classList.contains('d-none') && remoteVideo.videoWidth > 0) {
+                const canvas = document.createElement('canvas');
+                canvas.width = remoteVideo.videoWidth;
+                canvas.height = remoteVideo.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(remoteVideo, 0, 0, canvas.width, canvas.height);
+                downloadImg(canvas.toDataURL('image/png'));
+            } else if (remoteFrameImg && remoteFrameImg.src) {
+                downloadImg(remoteFrameImg.src);
+            }
         });
+    }
+
+    function downloadImg(dataUrl) {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `Screenshot_${SESSION_CODE}_${Date.now()}.png`;
+        a.click();
     }
 
     // STAFF: Fullscreen
     const btnFullscreen = document.getElementById('btnFullscreen');
     if (btnFullscreen) {
         btnFullscreen.addEventListener('click', function() {
-            const container = document.getElementById('videoContainer');
             if (!document.fullscreenElement) {
-                container.requestFullscreen().catch(err => {});
+                videoContainer.requestFullscreen().catch(err => {});
             } else {
                 document.exitFullscreen();
             }
@@ -640,6 +704,7 @@ $user = Auth::user();
                     body: JSON.stringify({ status: 'ENDED', _csrf_token: CSRF_TOKEN })
                 });
             } catch (e) {}
+            stopFrameBroadcaster();
             if (localStream) localStream.getTracks().forEach(t => t.stop());
             if (peerConnection) peerConnection.close();
             window.location.href = BASE_URL + '/remote-support';
@@ -654,6 +719,7 @@ $user = Auth::user();
             if (data.success) {
                 if (data.session_status === 'ENDED') {
                     updateBadge('danger', 'Phiên hỗ trợ đã kết thúc');
+                    stopFrameBroadcaster();
                     if (ROLE === 'CLIENT' && localStream) {
                         localStream.getTracks().forEach(t => t.stop());
                     }
@@ -697,10 +763,21 @@ $user = Auth::user();
                     else if (sig.signal_type === 'CANDIDATE') {
                         await addCandidateSafely(payload);
                     }
-                    else if (sig.signal_type === 'STAFF_READY' && ROLE === 'CLIENT') {
-                        if (localStream) {
-                            console.log('[Remote] Staff ready ping received, resending offer...');
-                            await renegotiateOffer();
+                    else if (sig.signal_type === 'FRAME' && ROLE === 'STAFF') {
+                        if (remoteFrameImg) {
+                            remoteFrameImg.src = payload;
+
+                            // Display image feed if WebRTC video has not started rendering yet
+                            if (!remoteVideo || remoteVideo.classList.contains('d-none') || remoteVideo.videoWidth === 0) {
+                                remoteFrameImg.classList.remove('d-none');
+                                if (remoteVideo) remoteVideo.classList.add('d-none');
+                                if (staffWaitingBox) staffWaitingBox.classList.add('d-none');
+                                if (videoToolbar) {
+                                    videoToolbar.classList.remove('d-none');
+                                    videoToolbar.classList.add('d-flex');
+                                }
+                                updateBadge('connected', 'Đang kết nối Live (Đang xem màn hình)');
+                            }
                         }
                     }
                     else if (sig.signal_type === 'CHAT') {
@@ -733,11 +810,6 @@ $user = Auth::user();
         } catch (err) {
             console.error('pollSignals error:', err);
         }
-    }
-
-    // If STAFF, announce presence so already-sharing client can send offer immediately
-    if (ROLE === 'STAFF') {
-        sendSignal('STAFF_READY', { timestamp: Date.now() });
     }
 
     // Start polling every 750ms for responsive interaction

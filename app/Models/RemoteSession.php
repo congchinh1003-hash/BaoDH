@@ -187,7 +187,16 @@ class RemoteSession extends Model
             'signal_type' => $signalType,
             'payload'     => $payload
         ]);
-        return (int)$this->db->lastInsertId();
+        $id = (int)$this->db->lastInsertId();
+
+        // Periodically purge old frame signals to keep DB lightweight (1 in 8 chance)
+        if (mt_rand(1, 8) === 1) {
+            try {
+                $this->db->exec("DELETE FROM remote_support_signals WHERE signal_type = 'FRAME' AND created_at < DATE_SUB(NOW(), INTERVAL 1 MINUTE)");
+            } catch (\Throwable $e) {}
+        }
+
+        return $id;
     }
 
     public function getSignals(int $sessionId, string $forType, int $afterId = 0): array
