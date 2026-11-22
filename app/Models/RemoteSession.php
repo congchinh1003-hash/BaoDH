@@ -373,6 +373,26 @@ class RemoteSession extends Model
         return $row ?: null;
     }
 
+    public function getPendingVncRequestForIt(int $itId): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT rs.*, u.full_name as it_name, eu.full_name as enduser_name, t.title as ticket_title, t.ticket_code
+            FROM remote_sessions rs
+            JOIN users u ON rs.it_id = u.id
+            JOIN users eu ON rs.enduser_id = eu.id
+            JOIN tickets t ON rs.ticket_id = t.id
+            WHERE rs.it_id = :it_id AND rs.status = 'pending' AND rs.created_at >= (NOW() - INTERVAL 15 MINUTE)
+            ORDER BY rs.id DESC LIMIT 1
+        ");
+        $stmt->execute(['it_id' => $itId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $row['is_test_self'] = true;
+            return $row;
+        }
+        return null;
+    }
+
     public function updateVncStatus(int $id, string $status): bool
     {
         $stmt = $this->db->prepare("UPDATE remote_sessions SET status = :status WHERE id = :id");

@@ -618,7 +618,14 @@ class RemoteSupportController extends Controller
             return;
         }
 
-        $pending = $this->remoteModel->getPendingVncRequestForUser((int)$user['id']);
+        $userId = (int)$user['id'];
+        $pending = $this->remoteModel->getPendingVncRequestForUser($userId);
+
+        // If not found for enduser, check if user is IT/Admin testing on 1 machine
+        if (!$pending && (Auth::isAdmin() || Auth::isStaff())) {
+            $pending = $this->remoteModel->getPendingVncRequestForIt($userId);
+        }
+
         if ($pending) {
             $response->json([
                 'has_request' => true,
@@ -654,6 +661,21 @@ class RemoteSupportController extends Controller
         $session = $this->remoteModel->getVncSession($sessionId);
         if (!$session) {
             $response->json(['success' => false, 'message' => 'Không tìm thấy phiên'], 404);
+            return;
+        }
+
+        $user = Auth::user();
+        if (!$user) {
+            $response->json(['success' => false, 'message' => 'Chưa đăng nhập'], 401);
+            return;
+        }
+
+        $userId = (int)$user['id'];
+        $isEndUser = ($userId === (int)$session['enduser_id']);
+        $isItStaff = ($userId === (int)$session['it_id']) || Auth::isAdmin();
+
+        if (!$isEndUser && !$isItStaff) {
+            $response->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện thao tác này'], 403);
             return;
         }
 

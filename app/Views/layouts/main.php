@@ -944,7 +944,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentVncSessionId = req.id;
                     const reqText = document.getElementById('novncRequesterText');
                     const tickText = document.getElementById('novncTicketText');
-                    if (reqText) reqText.textContent = `IT [${req.it_name}] muốn điều khiển máy bạn`;
+                    if (reqText) {
+                        if (req.is_test_self) {
+                            reqText.innerHTML = '<span class="badge bg-warning text-dark me-1">Test 1 Máy</span> Yêu cầu điều khiển máy khách: ' + (req.enduser_name || 'Đỗ Mai Phương');
+                        } else {
+                            reqText.textContent = `IT [${req.it_name}] muốn điều khiển máy bạn`;
+                        }
+                    }
                     if (tickText) tickText.textContent = `#${req.ticket_code || req.ticket_id}: ${req.ticket_title}`;
                     const modalEl = document.getElementById('novncIncomingModal');
                     if (modalEl && (!modalEl.classList.contains('show'))) {

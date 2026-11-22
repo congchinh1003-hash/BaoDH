@@ -2606,7 +2606,12 @@ function updateChecklistProgress() {
                         Hệ thống đã gửi thông báo xác nhận tới màn hình của <strong><?= htmlspecialchars($ticket['requester_name'] ?? 'User') ?></strong>.<br>
                         Khung điều khiển sẽ tự động mở ngay khi người dùng bấm <strong>"Chấp Nhận Cho Điều Khiển"</strong>.
                     </p>
-                    <div class="p-3 bg-secondary bg-opacity-25 rounded-3 d-inline-block text-start border border-secondary" style="max-width: 520px; font-size: 0.8rem;">
+                    <div class="mb-4">
+                        <button type="button" class="btn btn-success fw-bold px-4 py-2 rounded-pill shadow-lg animate__animated animate__pulse animate__infinite" id="btnBypassAcceptTest">
+                            <i class="bi bi-play-circle-fill me-1"></i> [Test 1 Máy] Bấm Vào Đây Để Tự Chấp Nhận & Bắt Đầu Ngay
+                        </button>
+                    </div>
+                    <div class="p-3 bg-secondary bg-opacity-25 rounded-3 d-inline-block text-start border border-secondary" style="max-width: 540px; font-size: 0.8rem;">
                         <div class="text-warning fw-bold mb-1"><i class="bi bi-info-circle me-1"></i> Yêu cầu kỹ thuật để kết nối noVNC:</div>
                         <div>1. Máy khách đã bật <strong>TightVNC Server</strong> (Cổng 5900, mật khẩu <code>123456</code>).</div>
                         <div>2. Cầu nối <strong>Websockify</strong> đang chạy (Cổng 6080): <code>start_novnc_bridge.bat</code>.</div>
@@ -2615,8 +2620,18 @@ function updateChecklistProgress() {
                 </div>
 
                 <!-- Step 2: Active noVNC Frame -->
-                <div id="vncFrameWrapper" class="w-100 h-100" style="display:none; min-height: 80vh;">
-                    <iframe id="itNovncFrame" src="about:blank" style="width: 100%; height: 80vh; border: none; border-radius: 0 0 16px 16px;"></iframe>
+                <div id="vncFrameWrapper" class="w-100 h-100 flex-column" style="display:none; min-height: 80vh;">
+                    <div class="bg-dark p-2 border-bottom border-secondary d-flex align-items-center justify-content-between px-3">
+                        <div class="small text-light">
+                            <i class="bi bi-shield-check text-success me-1"></i>
+                            Đã kết nối noVNC (TightVNC 5900 &rarr; Websockify 6080).
+                            <span class="text-warning ms-2"><i class="bi bi-info-circle"></i> Nếu khung bên dưới bị trắng do Render chạy HTTPS, hãy bấm "Mở Cửa Sổ Riêng":</span>
+                        </div>
+                        <a href="http://127.0.0.1:6080/vnc_lite.html?autoconnect=true&resize=scale&password=123456" id="btnDirectVncTab" target="_blank" class="btn btn-info btn-sm fw-bold">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Mở Cửa Sổ Riêng (Fullscreen)
+                        </a>
+                    </div>
+                    <iframe id="itNovncFrame" src="about:blank" style="width: 100%; height: calc(80vh - 45px); border: none; border-radius: 0 0 16px 16px;"></iframe>
                 </div>
             </div>
         </div>
@@ -2627,6 +2642,33 @@ function updateChecklistProgress() {
 document.addEventListener('DOMContentLoaded', function() {
     let vncSessionId = null;
     let vncPollTimer = null;
+
+    const btnBypassAcceptTest = document.getElementById('btnBypassAcceptTest');
+    if (btnBypassAcceptTest) {
+        btnBypassAcceptTest.addEventListener('click', function() {
+            if (!vncSessionId) return;
+            btnBypassAcceptTest.disabled = true;
+            btnBypassAcceptTest.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang chấp nhận...';
+            fetch('<?= $baseUrl ?>/remote-support/vnc/respond', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
+                body: JSON.stringify({ session_id: vncSessionId, action: 'accept', _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    pollVncSessionStatus();
+                } else {
+                    alert(data.message || 'Lỗi chấp nhận');
+                    btnBypassAcceptTest.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert('Lỗi: ' + err.message);
+                btnBypassAcceptTest.disabled = false;
+            });
+        });
+    }
 
     const btnOpenNovncModal = document.getElementById('btnOpenNovncModal');
     if (btnOpenNovncModal) {
@@ -2641,6 +2683,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('btnOpenVncNewTab').style.display = 'none';
             document.getElementById('vncStatusBadge').className = 'badge bg-warning text-dark';
             document.getElementById('vncStatusBadge').textContent = 'Đang gửi yêu cầu...';
+            if (btnBypassAcceptTest) {
+                btnBypassAcceptTest.disabled = false;
+                btnBypassAcceptTest.innerHTML = '<i class="bi bi-play-circle-fill me-1"></i> [Test 1 Máy] Bấm Vào Đây Để Tự Chấp Nhận & Bắt Đầu Ngay';
+            }
 
             // Step 1: Send request to PHP
             fetch('<?= $baseUrl ?>/remote-support/vnc/request', {
