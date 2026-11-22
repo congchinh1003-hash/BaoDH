@@ -55,21 +55,56 @@ $baseUrl = Response::baseUrl();
     <?php endif; ?>
 
     <div class="row g-4">
-        <!-- CỘT TRÁI: THAM GIA BẰNG PIN HOẶC TẠO PHIÊN MỚI -->
+        <!-- CỘT TRÁI: KHU VỰC THAO TÁC -->
         <div class="col-12 col-lg-5">
-            <!-- THAM GIA BẰNG MÃ PIN -->
+
+            <!-- DÀNH CHO END-USER: MÃ SUPPORT RIÊNG CỦA TÀI KHOẢN (GIỐNG ULTRAVIEWER / ANYDESK) -->
+            <?php if (!$isStaff && !empty($mySupportSession)): ?>
+                <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white overflow-hidden" style="border-top: 4px solid #0052cc !important;">
+                    <div class="card-body p-4 text-center">
+                        <div class="badge bg-primary-subtle text-primary fw-bold px-3 py-2 fs-6 mb-2 rounded-pill">
+                            <i class="bi bi-person-badge-fill me-1"></i> MÃ HỖ TRỢ CỦA BẠN (YOUR SUPPORT PIN)
+                        </div>
+                        <h6 class="text-muted small fw-bold mb-3">Đọc mã 6 số này cho Kỹ thuật viên IT để được hỗ trợ từ xa:</h6>
+                        
+                        <div class="p-3 my-2 bg-light rounded-4 border border-2 border-primary border-dashed d-inline-block shadow-xs" style="min-width: 260px;">
+                            <div class="display-5 font-monospace fw-bold text-primary letter-spacing-1">
+                                <?= htmlspecialchars(str_replace('REM-', '', $mySupportSession['session_code'])) ?>
+                            </div>
+                            <div class="text-muted small font-monospace mt-1">Mã phiên: <strong><?= htmlspecialchars($mySupportSession['session_code']) ?></strong></div>
+                        </div>
+
+                        <p class="text-muted small mt-2 mb-3" style="line-height: 1.5;">
+                            Khi IT cần truy cập xem màn hình máy tính của bạn, bạn chỉ cần đọc mã <strong><?= htmlspecialchars(str_replace('REM-', '', $mySupportSession['session_code'])) ?></strong> cho IT và bấm nút bên dưới để sẵn sàng chia sẻ.
+                        </p>
+
+                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                            <a href="<?= $baseUrl ?>/remote-support/session/<?= $mySupportSession['session_code'] ?>" class="btn btn-primary btn-lg fw-bold px-4 shadow-sm">
+                                <i class="bi bi-display me-2"></i> Vào Phòng &amp; Sẵn Sàng Chia Sẻ
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary btn-lg fw-semibold" onclick="navigator.clipboard.writeText('<?= str_replace('REM-', '', $mySupportSession['session_code']) ?>'); alert('Đã sao chép mã PIN: <?= str_replace('REM-', '', $mySupportSession['session_code']) ?>');">
+                                <i class="bi bi-clipboard me-1"></i> Sao chép
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- THAM GIA BẰNG MÃ PIN (CHO CẢ IT HOẶC USER ĐÃ CÓ MÃ) -->
             <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
                 <div class="card-header bg-white py-3 border-bottom">
                     <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                        <i class="bi bi-key-fill text-warning"></i> Tham Gia Phiên Bằng Mã PIN
+                        <i class="bi bi-key-fill text-warning"></i> <?= $isStaff ? 'Nhập Mã PIN Của Khách Hàng Để Kết Nối' : 'Tham Gia Phiên Bằng Mã PIN Khác' ?>
                     </h6>
                 </div>
                 <div class="card-body p-4 text-center">
-                    <p class="text-muted small mb-3">Nhập mã PIN 6 số hoặc mã phiên dạng <code>REM-XXXXXX</code> do Kỹ thuật viên IT cung cấp cho bạn:</p>
+                    <p class="text-muted small mb-3">
+                        <?= $isStaff ? 'Nhập mã PIN 6 số do Khách hàng / User đọc cho bạn:' : 'Hoặc nhập mã PIN do Kỹ thuật viên IT gửi cho bạn:' ?>
+                    </p>
                     <form action="<?= $baseUrl ?>/remote-support/join" method="POST" class="d-flex gap-2 justify-content-center">
                         <input type="hidden" name="_csrf_token" value="<?= Session::csrfToken() ?>">
                         <input type="text" name="pin" class="form-control form-control-lg text-center font-monospace fw-bold letter-spacing-1 text-primary shadow-xs" 
-                               placeholder="Ví dụ: 829104" style="max-width: 250px; font-size: 1.3rem;" required autofocus>
+                               placeholder="Ví dụ: 829104" style="max-width: 250px; font-size: 1.3rem;" required>
                         <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">
                             <i class="bi bi-box-arrow-in-right me-1"></i> Kết Nối
                         </button>

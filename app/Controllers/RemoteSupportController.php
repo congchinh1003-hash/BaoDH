@@ -35,12 +35,18 @@ class RemoteSupportController extends Controller
         $userModel = new User();
         $allUsers = $isStaff ? $userModel->getAllUsers() : [];
 
+        $mySupportSession = null;
+        if (!$isStaff && $user) {
+            $mySupportSession = $this->remoteModel->findOrCreateActiveForClient((int)$user['id']);
+        }
+
         return $this->render('remote/index', [
-            'pageTitle'      => 'Hỗ Trợ Từ Xa (Remote Desktop Assistance)',
-            'isStaff'        => $isStaff,
-            'activeSessions' => $activeSessions,
-            'pendingForMe'   => $pendingForMe,
-            'allUsers'       => $allUsers
+            'pageTitle'        => 'Hỗ Trợ Từ Xa (Remote Desktop Assistance)',
+            'isStaff'          => $isStaff,
+            'activeSessions'   => $activeSessions,
+            'pendingForMe'     => $pendingForMe,
+            'mySupportSession' => $mySupportSession,
+            'allUsers'         => $allUsers
         ]);
     }
 
@@ -171,7 +177,18 @@ class RemoteSupportController extends Controller
         }
 
         $userId = Auth::id();
-        $isStaff = ($userId === (int)$session['staff_id']) || Auth::isAdmin() || Auth::isManager();
+        $isStaffUser = Auth::isStaff() || Auth::isAdmin() || Auth::isManager();
+
+        // If session was created by client and IT staff joins with PIN, assign staff
+        if (empty($session['staff_id']) || (int)$session['staff_id'] === 0) {
+            if ($isStaffUser) {
+                $this->remoteModel->assignStaff((int)$session['id'], $userId);
+                $session['staff_id'] = $userId;
+                $session['staff_name'] = Auth::user()['full_name'];
+            }
+        }
+
+        $isStaff = ($userId === (int)$session['staff_id']) || $isStaffUser;
         $isClient = ($userId === (int)$session['client_id']);
 
         if (!$isStaff && !$isClient) {

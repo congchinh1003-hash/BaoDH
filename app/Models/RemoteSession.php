@@ -83,11 +83,12 @@ class RemoteSession extends Model
         $prefixed = str_starts_with($code, 'REM-') ? $code : ('REM-' . $code);
         $stmt = $this->db->prepare("
             SELECT s.*, 
-                   st.full_name as staff_name, st.email as staff_email, st.username as staff_username,
+                   COALESCE(st.full_name, 'Chưa có kỹ thuật viên') as staff_name, 
+                   st.email as staff_email, st.username as staff_username,
                    cl.full_name as client_name, cl.email as client_email, cl.department as client_department,
                    t.ticket_code, t.title as ticket_title
             FROM remote_support_sessions s
-            JOIN users st ON s.staff_id = st.id
+            LEFT JOIN users st ON s.staff_id = st.id
             JOIN users cl ON s.client_id = cl.id
             LEFT JOIN tickets t ON s.ticket_id = t.id
             WHERE s.session_code = :code OR s.session_code = :prefixed
@@ -103,9 +104,9 @@ class RemoteSession extends Model
     public function findActiveForTicket(int $ticketId): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT s.*, st.full_name as staff_name, cl.full_name as client_name
+            SELECT s.*, COALESCE(st.full_name, 'Chưa có kỹ thuật viên') as staff_name, cl.full_name as client_name
             FROM remote_support_sessions s
-            JOIN users st ON s.staff_id = st.id
+            LEFT JOIN users st ON s.staff_id = st.id
             JOIN users cl ON s.client_id = cl.id
             WHERE s.ticket_id = :ticket_id AND s.status IN ('WAITING', 'CONNECTED')
             ORDER BY s.id DESC LIMIT 1
@@ -117,15 +118,43 @@ class RemoteSession extends Model
     public function findActiveForClient(int $clientId): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT s.*, st.full_name as staff_name, t.ticket_code, t.title as ticket_title
+            SELECT s.*, COALESCE(st.full_name, 'Chưa có kỹ thuật viên') as staff_name, t.ticket_code, t.title as ticket_title
             FROM remote_support_sessions s
-            JOIN users st ON s.staff_id = st.id
+            LEFT JOIN users st ON s.staff_id = st.id
             LEFT JOIN tickets t ON s.ticket_id = t.id
             WHERE s.client_id = :client_id AND s.status = 'WAITING'
             ORDER BY s.id DESC LIMIT 1
         ");
         $stmt->execute(['client_id' => $clientId]);
         return $stmt->fetch() ?: null;
+    }
+
+    public function findOrCreateActiveForClient(int $clientId): array
+    {
+        $existing = $this->findActiveForClient($clientId);
+        if ($existing) {
+            return $existing;
+        }
+
+        $pin = (string)random_int(100000, 999999);
+        $code = 'REM-' . $pin;
+
+        $stmt = $this->db->prepare("
+            INSERT INTO remote_support_sessions (session_code, ticket_id, staff_id, client_id, status, notes)
+            VALUES (:session_code, NULL, 0, :client_id, 'WAITING', 'Phiên hỗ trợ do người dùng tạo')
+        ");
+        $stmt->execute([
+            'session_code' => $code,
+            'client_id'    => $clientId
+        ]);
+
+        return $this->findByCode($code) ?? ['session_code' => $code, 'status' => 'WAITING'];
+    }
+
+    public function assignStaff(int $sessionId, int $staffId): void
+    {
+        $stmt = $this->db->prepare("UPDATE remote_support_sessions SET staff_id = :staff_id WHERE id = :id");
+        $stmt->execute(['staff_id' => $staffId, 'id' => $sessionId]);
     }
 
     public function updateStatus(int $id, string $status): void
