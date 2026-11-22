@@ -161,15 +161,17 @@ $currentHost = ($isHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ??
                     </div>
 
                     <!-- Quick Hotkeys Bar for Staff -->
-                    <div id="staffQuickKeysBar" class="position-absolute top-0 end-0 m-2 p-2 bg-dark bg-opacity-90 rounded-3 border border-secondary d-none flex-column gap-1 shadow" style="z-index: 25; width: 175px; font-size: 0.75rem;">
+                    <div id="staffQuickKeysBar" class="position-absolute top-0 end-0 m-2 p-2 bg-dark bg-opacity-90 rounded-3 border border-secondary d-none flex-column gap-1 shadow" style="z-index: 25; width: 185px; font-size: 0.75rem;">
                         <div class="text-warning fw-bold text-uppercase d-flex justify-content-between align-items-center mb-1" style="font-size:0.65rem;">
                             <span><i class="bi bi-keyboard me-1"></i> Phím Tắt</span>
                             <span class="badge bg-info" id="ctrlStatusBadge">CTRL: BẬT</span>
                         </div>
+                        <button type="button" class="btn btn-sm btn-outline-warning py-1 text-start quick-hotkey" data-hk="notepad"><i class="bi bi-file-text text-warning me-1"></i> Mở Notepad (Test)</button>
+                        <button type="button" class="btn btn-sm btn-outline-info py-1 text-start quick-hotkey" data-hk="calc"><i class="bi bi-calculator text-info me-1"></i> Máy Tính (Calc)</button>
+                        <button type="button" class="btn btn-sm btn-outline-success py-1 text-start quick-hotkey" data-hk="show_desktop"><i class="bi bi-display text-success me-1"></i> Hiện Desktop (Win+D)</button>
                         <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="win"><i class="bi bi-windows text-primary me-1"></i> Start (Win)</button>
                         <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="run"><i class="bi bi-play-circle text-success me-1"></i> Run (Win+R)</button>
                         <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="taskmgr"><i class="bi bi-speedometer2 text-danger me-1"></i> Task Manager</button>
-                        <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="explorer"><i class="bi bi-folder2-open text-warning me-1"></i> Explorer (Win+E)</button>
                         <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="cmd"><i class="bi bi-terminal-fill text-info me-1"></i> Mở CMD</button>
                         <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="alt_f4"><i class="bi bi-x-circle text-danger me-1"></i> Đóng Cửa Sổ</button>
                         
@@ -770,6 +772,7 @@ $currentHost = ($isHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ??
             }
             const hk = this.getAttribute('data-hk');
             sendControlEvent('HOTKEY', { hotkey: hk });
+            showKeyToast('Đang gọi: ' + this.innerText.trim());
             this.classList.add('btn-light', 'text-dark');
             setTimeout(() => this.classList.remove('btn-light', 'text-dark'), 200);
         });

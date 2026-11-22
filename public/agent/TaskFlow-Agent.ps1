@@ -25,6 +25,10 @@ public class Win32Input {
     [DllImport("user32.dll")]
     public static extern short VkKeyScan(char ch);
 
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+
+    public const uint MOUSEEVENTF_MOVE       = 0x0001;
     public const uint MOUSEEVENTF_LEFTDOWN   = 0x0002;
     public const uint MOUSEEVENTF_LEFTUP     = 0x0004;
     public const uint MOUSEEVENTF_RIGHTDOWN  = 0x0008;
@@ -32,36 +36,58 @@ public class Win32Input {
     public const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
     public const uint MOUSEEVENTF_MIDDLEUP   = 0x0040;
     public const uint MOUSEEVENTF_WHEEL      = 0x0800;
+    public const uint MOUSEEVENTF_ABSOLUTE   = 0x8000;
     public const uint KEYEVENTF_KEYUP        = 0x0002;
 
-    public static void ClickLeft(int x, int y) {
+    public static void ClickLeft(int x, int y, int sw, int sh) {
         SetCursorPos(x, y);
+        uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
+        uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
+        mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTDOWN, nx, ny, 0, 0);
         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-        System.Threading.Thread.Sleep(10);
+        System.Threading.Thread.Sleep(35);
+        mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTUP, nx, ny, 0, 0);
         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
     }
 
-    public static void DoubleClick(int x, int y) {
-        ClickLeft(x, y);
-        System.Threading.Thread.Sleep(50);
-        ClickLeft(x, y);
+    public static void DoubleClick(int x, int y, int sw, int sh) {
+        ClickLeft(x, y, sw, sh);
+        System.Threading.Thread.Sleep(80);
+        ClickLeft(x, y, sw, sh);
     }
 
-    public static void ClickRight(int x, int y) {
+    public static void ClickRight(int x, int y, int sw, int sh) {
         SetCursorPos(x, y);
+        uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
+        uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
+        mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_RIGHTDOWN, nx, ny, 0, 0);
         mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-        System.Threading.Thread.Sleep(10);
+        System.Threading.Thread.Sleep(35);
+        mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_RIGHTUP, nx, ny, 0, 0);
         mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
     }
 
-    public static void MouseDown(int x, int y) {
+    public static void MouseDown(int x, int y, int sw, int sh) {
         SetCursorPos(x, y);
+        uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
+        uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
+        mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTDOWN, nx, ny, 0, 0);
         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
     }
 
-    public static void MouseUp(int x, int y) {
+    public static void MouseUp(int x, int y, int sw, int sh) {
         SetCursorPos(x, y);
+        uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
+        uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
+        mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTUP, nx, ny, 0, 0);
         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+    }
+
+    public static void MoveCursor(int x, int y, int sw, int sh) {
+        SetCursorPos(x, y);
+        uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
+        uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
+        mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE, nx, ny, 0, 0);
     }
 
     public static void Scroll(int delta) {
@@ -70,14 +96,14 @@ public class Win32Input {
 
     public static void PressKey(byte vkCode) {
         keybd_event(vkCode, 0, 0, 0);
-        System.Threading.Thread.Sleep(15);
+        System.Threading.Thread.Sleep(20);
         keybd_event(vkCode, 0, KEYEVENTF_KEYUP, 0);
     }
 
     public static void SendHotkey(byte mod, byte key) {
         keybd_event(mod, 0, 0, 0);
         keybd_event(key, 0, 0, 0);
-        System.Threading.Thread.Sleep(20);
+        System.Threading.Thread.Sleep(25);
         keybd_event(key, 0, KEYEVENTF_KEYUP, 0);
         keybd_event(mod, 0, KEYEVENTF_KEYUP, 0);
     }
@@ -96,7 +122,7 @@ public class Win32Input {
         if (alt) keybd_event(0x12, 0, 0, 0);
 
         keybd_event(vkCode, 0, 0, 0);
-        System.Threading.Thread.Sleep(10);
+        System.Threading.Thread.Sleep(15);
         keybd_event(vkCode, 0, KEYEVENTF_KEYUP, 0);
 
         if (alt) keybd_event(0x12, 0, KEYEVENTF_KEYUP, 0);
@@ -110,6 +136,9 @@ if (-not ([System.Management.Automation.PSTypeName]'Win32Input').Type) {
     Add-Type -TypeDefinition $win32Source
 }
 
+# Enable DPI Awareness for physical pixel coordinates
+try { [Win32Input]::SetProcessDPIAware() | Out-Null } catch {}
+
 # Resolve Session Code and Host URL
 if (-not $s) { $s = $sessionCode }
 if (-not $h) { $h = $hostUrl }
@@ -121,7 +150,7 @@ Write-Host "============================================================" -Foreg
 
 if (-not $s) {
     Write-Host ""
-    $s = Read-Host "Nhap Ma Phien Ket Noi hoac PIN 6 so (Vi du: 498181 hoac REM-498181)"
+    $s = Read-Host "Nhap Ma Phien Ket Noi hoac PIN 6 so (Vi du: 167274 hoac REM-167274)"
 }
 
 $s = $s.Trim().ToUpper()
@@ -208,7 +237,7 @@ $vkMap = @{
     "F12"        = 0x7B
 }
 
-# Main Control Loop (50ms polling for real-time responsiveness)
+# Main Control Loop (45ms polling for real-time responsiveness)
 while ($true) {
     try {
         # Send heartbeat every 4 seconds
@@ -236,20 +265,20 @@ while ($true) {
                 if ($type -eq 'MOUSE_MOVE') {
                     $targetX = [Math]::Round($p.x * $screenWidth)
                     $targetY = [Math]::Round($p.y * $screenHeight)
-                    [Win32Input]::SetCursorPos($targetX, $targetY)
+                    [Win32Input]::MoveCursor($targetX, $targetY, $screenWidth, $screenHeight)
                 }
                 # MOUSE CLICK (LEFT, RIGHT, DOUBLE)
                 elseif ($type -eq 'MOUSE_CLICK') {
                     $targetX = [Math]::Round($p.x * $screenWidth)
                     $targetY = [Math]::Round($p.y * $screenHeight)
                     if ($p.button -eq 'right') {
-                        [Win32Input]::ClickRight($targetX, $targetY)
+                        [Win32Input]::ClickRight($targetX, $targetY, $screenWidth, $screenHeight)
                         Write-Host " [ACTION] Chuot phai: ($targetX, $targetY)" -ForegroundColor DarkCyan
                     } elseif ($p.double) {
-                        [Win32Input]::DoubleClick($targetX, $targetY)
+                        [Win32Input]::DoubleClick($targetX, $targetY, $screenWidth, $screenHeight)
                         Write-Host " [ACTION] Double Click: ($targetX, $targetY)" -ForegroundColor Cyan
                     } else {
-                        [Win32Input]::ClickLeft($targetX, $targetY)
+                        [Win32Input]::ClickLeft($targetX, $targetY, $screenWidth, $screenHeight)
                         Write-Host " [ACTION] Chuot trai: ($targetX, $targetY)" -ForegroundColor Green
                     }
                 }
@@ -257,12 +286,12 @@ while ($true) {
                 elseif ($type -eq 'MOUSE_DOWN') {
                     $targetX = [Math]::Round($p.x * $screenWidth)
                     $targetY = [Math]::Round($p.y * $screenHeight)
-                    [Win32Input]::MouseDown($targetX, $targetY)
+                    [Win32Input]::MouseDown($targetX, $targetY, $screenWidth, $screenHeight)
                 }
                 elseif ($type -eq 'MOUSE_UP') {
                     $targetX = [Math]::Round($p.x * $screenWidth)
                     $targetY = [Math]::Round($p.y * $screenHeight)
-                    [Win32Input]::MouseUp($targetX, $targetY)
+                    [Win32Input]::MouseUp($targetX, $targetY, $screenWidth, $screenHeight)
                 }
                 # KEY PRESS
                 elseif ($type -eq 'KEY_PRESS') {
@@ -330,6 +359,15 @@ while ($true) {
                     } elseif ($hk -eq 'alt_f4') {
                         [Win32Input]::SendHotkey(0x12, 0x73) # Alt + F4
                         Write-Host " [ACTION] Dong Cua So (Alt+F4)" -ForegroundColor Yellow
+                    } elseif ($hk -eq 'notepad') {
+                        Start-Process "notepad.exe"
+                        Write-Host " [ACTION] Mo Notepad" -ForegroundColor Yellow
+                    } elseif ($hk -eq 'calc') {
+                        Start-Process "calc.exe"
+                        Write-Host " [ACTION] Mo Calculator" -ForegroundColor Yellow
+                    } elseif ($hk -eq 'show_desktop') {
+                        [Win32Input]::SendHotkey(0x5B, 0x44) # Win + D
+                        Write-Host " [ACTION] Thu nho het / Hien man hinh Desktop (Win+D)" -ForegroundColor Yellow
                     }
                 }
                 # SCROLL
@@ -342,7 +380,7 @@ while ($true) {
     } catch {
         # Continue on temporary network blips
     }
-    Start-Sleep -Milliseconds 50
+    Start-Sleep -Milliseconds 45
 }
 
 Write-Host "Cam on ban da su dung TaskFlow Remote Assistance." -ForegroundColor Cyan
