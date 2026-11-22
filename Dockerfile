@@ -18,8 +18,9 @@ WORKDIR /var/www/html
 # Copy project files
 COPY . /var/www/html/
 
-# Permissions for web server writable folders
-RUN chown -R www-data:www-data /var/www/html \
+# Ensure all runtime writable directories exist and set correct permissions
+RUN mkdir -p /var/www/html/uploads /var/www/html/storage /var/www/html/public/uploads \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/uploads \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/public/uploads
