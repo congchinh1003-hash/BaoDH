@@ -17,7 +17,7 @@ public class Win32Input {
     public static extern bool SetCursorPos(int X, int Y);
 
     [DllImport("user32.dll")]
-    public static extern void mouse_event(uint dwFlags, uint dx, uint dy, int dwData, int dwExtraInfo);
+    public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, int dwExtraInfo);
 
     [DllImport("user32.dll")]
     public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
@@ -50,6 +50,20 @@ public class Win32Input {
         mouse_event(MOUSEEVENTF_RIGHTUP, (uint)x, (uint)y, 0, 0);
     }
 
+    public static void MouseDown(int x, int y) {
+        SetCursorPos(x, y);
+        mouse_event(MOUSEEVENTF_LEFTDOWN, (uint)x, (uint)y, 0, 0);
+    }
+
+    public static void MouseUp(int x, int y) {
+        SetCursorPos(x, y);
+        mouse_event(MOUSEEVENTF_LEFTUP, (uint)x, (uint)y, 0, 0);
+    }
+
+    public static void Scroll(int delta) {
+        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (uint)delta, 0);
+    }
+
     public static void PressKey(byte vkCode) {
         keybd_event(vkCode, 0, 0, 0);
         System.Threading.Thread.Sleep(20);
@@ -77,6 +91,10 @@ if (-not $h) { $h = $hostUrl }
 if (-not $h) {
     $h = "https://baodh.onrender.com"
 }
+# Ensure https if on render
+if ($h -match "onrender.com" -and $h.StartsWith("http://")) {
+    $h = $h.Replace("http://", "https://")
+}
 
 Clear-Host
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -85,7 +103,7 @@ Write-Host "============================================================" -Foreg
 
 if (-not $s) {
     Write-Host ""
-    $s = Read-Host "Nhap Ma Phien Ket Noi hoac PIN 6 so (Vi du: 332430 hoac REM-332430)"
+    $s = Read-Host "Nhap Ma Phien Ket Noi hoac PIN 6 so (Vi du: 614045 hoac REM-614045)"
 }
 
 $s = $s.Trim().ToUpper()
@@ -185,14 +203,12 @@ while ($true) {
                 elseif ($type -eq 'MOUSE_DOWN') {
                     $targetX = [Math]::Round($p.x * $screenWidth)
                     $targetY = [Math]::Round($p.y * $screenHeight)
-                    [Win32Input]::SetCursorPos($targetX, $targetY)
-                    [Win32Input]::mouse_event(0x0002, (uint)$targetX, (uint)$targetY, 0, 0)
+                    [Win32Input]::MouseDown($targetX, $targetY)
                 }
                 elseif ($type -eq 'MOUSE_UP') {
                     $targetX = [Math]::Round($p.x * $screenWidth)
                     $targetY = [Math]::Round($p.y * $screenHeight)
-                    [Win32Input]::SetCursorPos($targetX, $targetY)
-                    [Win32Input]::mouse_event(0x0004, (uint)$targetX, (uint)$targetY, 0, 0)
+                    [Win32Input]::MouseUp($targetX, $targetY)
                 }
                 # KEY PRESS
                 elseif ($type -eq 'KEY_PRESS') {
@@ -235,7 +251,7 @@ while ($true) {
                 # SCROLL
                 elseif ($type -eq 'SCROLL') {
                     $delta = [int]($p.deltaY * -1)
-                    [Win32Input]::mouse_event(0x0800, 0, 0, $delta, 0)
+                    [Win32Input]::Scroll($delta)
                 }
             }
         }

@@ -469,7 +469,13 @@ class RemoteSupportController extends Controller
         }
 
         $cleanCode = htmlspecialchars($session['session_code']);
-        $host = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . ($_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com');
+        $isHttps = (
+            (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+            (isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'onrender.com'))
+        );
+        $proto = $isHttps ? 'https' : 'http';
+        $host = $proto . "://" . ($_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com');
 
         $batContent = "@echo off\r\n";
         $batContent .= "chcp 65001 >nul\r\n";
