@@ -93,6 +93,11 @@ class User extends Model
         return $stmt->fetchAll();
     }
 
+    public function getAllActive(): array
+    {
+        return $this->getAllUsers();
+    }
+
     public function getStaffMembersByGroup(?int $groupId = null): array
     {
         if ($groupId) {

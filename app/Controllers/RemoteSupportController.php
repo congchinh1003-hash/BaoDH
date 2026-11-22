@@ -33,7 +33,7 @@ class RemoteSupportController extends Controller
         $pendingForMe = $this->remoteModel->findActiveForClient((int)$user['id']);
 
         $userModel = new User();
-        $allUsers = $isStaff ? $userModel->getAllActive() : [];
+        $allUsers = $isStaff ? $userModel->getAllUsers() : [];
 
         return $this->render('remote/index', [
             'pageTitle'      => 'Hỗ Trợ Từ Xa (Remote Desktop Assistance)',
