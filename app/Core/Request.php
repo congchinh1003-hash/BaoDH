@@ -60,9 +60,18 @@ class Request
     public function getBody(): array
     {
         $body = [];
-        if ($this->isPost()) {
+        if ($this->isPost() || $this->getMethod() === 'PUT' || $this->getMethod() === 'PATCH') {
             foreach ($_POST as $key => $value) {
                 $body[$key] = is_string($value) ? trim($value) : $value;
+            }
+
+            // Also parse JSON payloads if sent via fetch / application/json
+            $rawInput = file_get_contents('php://input');
+            if (!empty($rawInput)) {
+                $jsonData = json_decode($rawInput, true);
+                if (is_array($jsonData)) {
+                    $body = array_merge($body, $jsonData);
+                }
             }
         }
         return $body;
@@ -79,7 +88,8 @@ class Request
 
     public function input(string $key, mixed $default = null): mixed
     {
-        return $_POST[$key] ?? $_GET[$key] ?? $default;
+        $body = $this->getBody();
+        return $body[$key] ?? $_GET[$key] ?? $default;
     }
 
     public function getFiles(): array

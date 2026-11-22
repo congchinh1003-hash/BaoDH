@@ -75,9 +75,13 @@ $user = Auth::user();
                         <div class="p-4 bg-success bg-opacity-10 border border-success rounded-4 d-inline-block" style="max-width: 600px;">
                             <div class="spinner-grow text-success mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
                             <h4 class="fw-bold text-success mb-2">MÀN HÌNH CỦA BẠN ĐANG ĐƯỢC CHIA SẺ VỚI IT</h4>
-                            <p class="text-light text-opacity-75 small mb-4">
+                            <p class="text-light text-opacity-75 small mb-3">
                                 Kỹ thuật viên <strong><?= htmlspecialchars($session['staff_name']) ?></strong> đang quan sát trực tiếp màn hình của bạn. Khi kỹ thuật viên chỉ điểm laser, trên màn hình sẽ xuất hiện vòng tròn đỏ nhấp nháy để bạn dễ nhận biết.
                             </p>
+                            <!-- Live mini-preview of what client is sharing -->
+                            <div class="mb-3 d-flex justify-content-center">
+                                <video id="clientLocalPreview" autoplay playsinline muted class="rounded-3 border border-success shadow-sm" style="max-width: 360px; max-height: 200px; width: 100%; object-fit: contain; background: #000;"></video>
+                            </div>
                             <div class="d-flex justify-content-center gap-3">
                                 <button type="button" id="btnStopShare" class="btn btn-outline-danger fw-bold px-4">
                                     <i class="bi bi-pause-circle me-1"></i> Tạm dừng chia sẻ
@@ -102,8 +106,8 @@ $user = Auth::user();
                         </div>
                     </div>
 
-                    <!-- Live Video Element -->
-                    <video id="remoteVideo" autoplay playsinline class="w-100 h-100 d-none" style="object-fit: contain; max-height: 75vh; cursor: crosshair;"></video>
+                    <!-- Live Video Element (muted required for autoplay) -->
+                    <video id="remoteVideo" autoplay playsinline muted class="w-100 h-100 d-none" style="object-fit: contain; max-height: 75vh; cursor: crosshair;"></video>
 
                     <!-- Laser Pointer Layer (Canvas overlay) -->
                     <canvas id="pointerOverlay" class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none; z-index: 10;"></canvas>
@@ -272,11 +276,15 @@ $user = Auth::user();
     let lastSignalId = 0;
     let pollInterval = null;
     let isLaserEnabled = true;
+    let candidateQueue = [];
 
     const rtcConfig = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' }
         ]
     };
 
@@ -303,12 +311,16 @@ $user = Auth::user();
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Signaling helper
+    // Signaling helper with CSRF header & JSON payload
     async function sendSignal(type, payload) {
         try {
-            await fetch(BASE_URL + '/remote-support/api/signal', {
+            console.log('[Remote] Sending signal:', type);
+            const res = await fetch(BASE_URL + '/remote-support/api/signal', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
                 body: JSON.stringify({
                     session_code: SESSION_CODE,
                     sender_type: ROLE,
@@ -317,13 +329,44 @@ $user = Auth::user();
                     _csrf_token: CSRF_TOKEN
                 })
             });
+            const data = await res.json();
+            if (!data.success) {
+                console.warn('[Remote] sendSignal rejected:', data);
+            }
         } catch (e) {
-            console.error('sendSignal error:', e);
+            console.error('[Remote] sendSignal error:', e);
+        }
+    }
+
+    // Queue-safe ICE Candidate helper
+    async function addCandidateSafely(candidate) {
+        if (!peerConnection || !peerConnection.remoteDescription || !peerConnection.remoteDescription.type) {
+            candidateQueue.push(candidate);
+            return;
+        }
+        try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+            console.warn('[Remote] addIceCandidate catch:', e);
+        }
+    }
+
+    async function drainCandidates() {
+        while (candidateQueue.length > 0) {
+            const c = candidateQueue.shift();
+            try {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+            } catch (e) {
+                console.warn('[Remote] drainCandidates catch:', e);
+            }
         }
     }
 
     // Initialize WebRTC PeerConnection
     function createPeer() {
+        if (peerConnection) {
+            try { peerConnection.close(); } catch (e) {}
+        }
         peerConnection = new RTCPeerConnection(rtcConfig);
 
         peerConnection.onicecandidate = function(event) {
@@ -333,23 +376,52 @@ $user = Auth::user();
         };
 
         peerConnection.ontrack = function(event) {
-            if (remoteVideo) {
+            console.log('[Remote] ontrack stream received:', event.streams);
+            if (remoteVideo && event.streams && event.streams[0]) {
                 remoteVideo.srcObject = event.streams[0];
                 remoteVideo.classList.remove('d-none');
                 if (staffWaitingBox) staffWaitingBox.classList.add('d-none');
-                if (videoToolbar) videoToolbar.classList.remove('d-none');
-                videoToolbar.classList.add('d-flex');
-                updateBadge('connected', 'Đang kết nối Live (60 FPS)');
+                if (videoToolbar) {
+                    videoToolbar.classList.remove('d-none');
+                    videoToolbar.classList.add('d-flex');
+                }
+                updateBadge('connected', 'Đang kết nối Live (Đã nhận màn hình)');
+                remoteVideo.play().catch(e => console.warn('[Remote] Autoplay notice:', e));
+            }
+        };
+
+        peerConnection.oniceconnectionstatechange = function() {
+            console.log('[Remote] ICE state:', peerConnection.iceConnectionState);
+            if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
+                updateBadge('connected', 'Đã kết nối Live');
+            } else if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
+                updateBadge('danger', 'Mất kết nối P2P');
             }
         };
 
         peerConnection.onconnectionstatechange = function() {
+            console.log('[Remote] Peer state:', peerConnection.connectionState);
             if (peerConnection.connectionState === 'connected') {
                 updateBadge('connected', 'Đã kết nối Live');
             } else if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
                 updateBadge('danger', 'Đã ngắt kết nối');
             }
         };
+    }
+
+    // Re-negotiate offer (used when IT enters/reloads or client needs re-send)
+    async function renegotiateOffer() {
+        if (!localStream) return;
+        try {
+            console.log('[Remote] Re-negotiating OFFER...');
+            createPeer();
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            await sendSignal('OFFER', offer);
+        } catch (e) {
+            console.error('[Remote] renegotiateOffer error:', e);
+        }
     }
 
     // CLIENT: Start Screen Sharing
@@ -361,6 +433,12 @@ $user = Auth::user();
                     video: { cursor: 'always', frameRate: 30 },
                     audio: false
                 });
+
+                // Attach to client preview
+                const clientPreview = document.getElementById('clientLocalPreview');
+                if (clientPreview) {
+                    clientPreview.srcObject = localStream;
+                }
 
                 document.getElementById('clientControlBox').classList.add('d-none');
                 document.getElementById('clientSharingBanner').classList.remove('d-none');
@@ -376,9 +454,11 @@ $user = Auth::user();
 
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
+                console.log('[Remote] Local Offer created & sent');
                 await sendSignal('OFFER', offer);
 
             } catch (err) {
+                console.error('[Remote] getDisplayMedia error:', err);
                 alert('Không thể chia sẻ màn hình: ' + err.message);
             }
         });
@@ -389,6 +469,9 @@ $user = Auth::user();
             localStream.getTracks().forEach(t => t.stop());
             localStream = null;
         }
+        const clientPreview = document.getElementById('clientLocalPreview');
+        if (clientPreview) clientPreview.srcObject = null;
+
         document.getElementById('clientControlBox').classList.remove('d-none');
         document.getElementById('clientSharingBanner').classList.add('d-none');
         updateBadge('waiting', 'Đã tạm dừng chia sẻ');
@@ -400,6 +483,34 @@ $user = Auth::user();
         btnStopShare.addEventListener('click', handleStopSharing);
     }
 
+    // STAFF: Laser pointer visual ripple on canvas
+    function drawStaffLaser(xRatio, yRatio) {
+        const canvas = document.getElementById('pointerOverlay');
+        if (!canvas) return;
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        const ctx = canvas.getContext('2d');
+        const cx = xRatio * canvas.width;
+        const cy = yRatio * canvas.height;
+        
+        let radius = 5;
+        const anim = setInterval(() => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(255, 0, 85, 0.35)';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ff0055';
+            ctx.stroke();
+            radius += 4;
+            if (radius > 40) {
+                clearInterval(anim);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }, 25);
+    }
+
     // STAFF: Laser pointer interaction on clicking video
     if (remoteVideo && ROLE === 'STAFF') {
         remoteVideo.addEventListener('click', function(e) {
@@ -407,6 +518,7 @@ $user = Auth::user();
             const rect = remoteVideo.getBoundingClientRect();
             const x = (e.clientX - rect.left) / rect.width;
             const y = (e.clientY - rect.top) / rect.height;
+            drawStaffLaser(x, y);
             sendSignal('POINTER', { x: x, y: y });
         });
     }
@@ -500,7 +612,10 @@ $user = Auth::user();
             try {
                 await fetch(BASE_URL + '/remote-support/api/ultraviewer/' + SESSION_CODE, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': CSRF_TOKEN
+                    },
                     body: JSON.stringify({ ultraviewer_id: uvId, ultraviewer_pass: uvPass, _csrf_token: CSRF_TOKEN })
                 });
                 alert('Đã gửi thông tin UltraViewer sang Kỹ thuật viên!');
@@ -518,7 +633,10 @@ $user = Auth::user();
             try {
                 await fetch(BASE_URL + '/remote-support/api/status/' + SESSION_CODE, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': CSRF_TOKEN
+                    },
                     body: JSON.stringify({ status: 'ENDED', _csrf_token: CSRF_TOKEN })
                 });
             } catch (e) {}
@@ -560,22 +678,29 @@ $user = Auth::user();
                     const payload = typeof sig.payload === 'string' ? JSON.parse(sig.payload) : sig.payload;
 
                     if (sig.signal_type === 'OFFER' && ROLE === 'STAFF') {
-                        if (!peerConnection) createPeer();
+                        console.log('[Remote] Staff processing OFFER from client...');
+                        createPeer();
                         await peerConnection.setRemoteDescription(new RTCSessionDescription(payload));
+                        await drainCandidates();
                         const answer = await peerConnection.createAnswer();
                         await peerConnection.setLocalDescription(answer);
+                        console.log('[Remote] Staff setLocalDescription ANSWER, sending...');
                         await sendSignal('ANSWER', answer);
                     }
                     else if (sig.signal_type === 'ANSWER' && ROLE === 'CLIENT') {
+                        console.log('[Remote] Client processing ANSWER from staff...');
                         if (peerConnection) {
                             await peerConnection.setRemoteDescription(new RTCSessionDescription(payload));
+                            await drainCandidates();
                         }
                     }
                     else if (sig.signal_type === 'CANDIDATE') {
-                        if (peerConnection && peerConnection.remoteDescription) {
-                            try {
-                                await peerConnection.addIceCandidate(new RTCIceCandidate(payload));
-                            } catch (e) {}
+                        await addCandidateSafely(payload);
+                    }
+                    else if (sig.signal_type === 'STAFF_READY' && ROLE === 'CLIENT') {
+                        if (localStream) {
+                            console.log('[Remote] Staff ready ping received, resending offer...');
+                            await renegotiateOffer();
                         }
                     }
                     else if (sig.signal_type === 'CHAT') {
@@ -610,8 +735,13 @@ $user = Auth::user();
         }
     }
 
-    // Start polling every 1.2 seconds
-    pollInterval = setInterval(pollSignals, 1200);
+    // If STAFF, announce presence so already-sharing client can send offer immediately
+    if (ROLE === 'STAFF') {
+        sendSignal('STAFF_READY', { timestamp: Date.now() });
+    }
+
+    // Start polling every 750ms for responsive interaction
+    pollInterval = setInterval(pollSignals, 750);
     pollSignals();
 })();
 </script>

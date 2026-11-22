@@ -214,6 +214,16 @@ class RemoteSupportController extends Controller
     public function apiSignalPost(Request $request, Response $response): void
     {
         $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $body = $decoded;
+                }
+            }
+        }
+
         $code = trim($body['session_code'] ?? '');
         $signalType = trim($body['signal_type'] ?? '');
         $payload = is_string($body['payload'] ?? null) ? $body['payload'] : json_encode($body['payload'] ?? []);
@@ -271,6 +281,15 @@ class RemoteSupportController extends Controller
     public function apiUpdateStatus(Request $request, Response $response, string $code): void
     {
         $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $body = $decoded;
+                }
+            }
+        }
         $status = trim($body['status'] ?? '');
 
         $session = $this->remoteModel->findByCode($code);
@@ -294,6 +313,15 @@ class RemoteSupportController extends Controller
     public function apiSaveUltraviewer(Request $request, Response $response, string $code): void
     {
         $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $body = $decoded;
+                }
+            }
+        }
         $uvId = trim($body['ultraviewer_id'] ?? '');
         $uvPass = trim($body['ultraviewer_pass'] ?? '');
 

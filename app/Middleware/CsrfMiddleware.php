@@ -11,7 +11,10 @@ class CsrfMiddleware
     public function handle(Request $request, Response $response): void
     {
         if ($request->isPost()) {
-            $token = $request->input('_csrf_token') ?? $request->input('csrf_token');
+            $token = $request->input('_csrf_token') 
+                  ?? $request->input('csrf_token') 
+                  ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
+
             if (!Session::validateCsrf($token)) {
                 if ($request->isAjax()) {
                     $response->json(['success' => false, 'message' => 'CSRF token không hợp lệ hoặc đã hết hạn.'], 403);
