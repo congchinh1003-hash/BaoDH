@@ -13,7 +13,7 @@ $options = [
     PDO::ATTR_EMULATE_PREPARES   => true,
 ];
 
-// Support TiDB Cloud / SSL connections
+// Detect TiDB Cloud / Cloud MySQL SSL connections
 $isCloudDb = (
     getenv('DB_SSL') === 'true' || 
     strpos($host, 'tidbcloud.com') !== false ||
@@ -23,11 +23,31 @@ $isCloudDb = (
 );
 
 if ($isCloudDb) {
-    if (getenv('DB_SSL_CA') && file_exists(getenv('DB_SSL_CA'))) {
-        $options[PDO::MYSQL_ATTR_SSL_CA] = getenv('DB_SSL_CA');
-    } else {
-        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+    // TiDB Cloud Serverless requires SSL/TLS.
+    // In PHP PDO mysqlnd, MYSQL_ATTR_SSL_CA must be specified to trigger SSL transport.
+    $systemCAs = [
+        getenv('DB_SSL_CA'),
+        '/etc/ssl/certs/ca-certificates.crt', // Standard Debian/Ubuntu Docker container path
+        '/etc/pki/tls/certs/ca-bundle.crt',   // RedHat/CentOS
+        '/etc/ssl/cert.pem',                  // Alpine / macOS
+    ];
+
+    $caFound = null;
+    foreach ($systemCAs as $path) {
+        if ($path && file_exists($path)) {
+            $caFound = $path;
+            break;
+        }
     }
+
+    if ($caFound) {
+        $options[PDO::MYSQL_ATTR_SSL_CA] = $caFound;
+    } else {
+        // Fallback: set to default CA bundle or dummy path for mysqlnd TLS activation
+        $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/ssl/certs/ca-certificates.crt';
+    }
+    
+    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
 }
 
 return [
