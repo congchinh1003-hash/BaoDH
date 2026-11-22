@@ -284,6 +284,16 @@ class RemoteSession extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getLatestControlEventId(int $sessionId): int
+    {
+        $stmt = $this->db->prepare("
+            SELECT COALESCE(MAX(id), 0) FROM remote_support_control_events
+            WHERE session_id = :session_id
+        ");
+        $stmt->execute(['session_id' => $sessionId]);
+        return (int)$stmt->fetchColumn();
+    }
+
     public function updateAgentHeartbeat(int $sessionId, ?string $resolution = null): void
     {
         $stmt = $this->db->prepare("

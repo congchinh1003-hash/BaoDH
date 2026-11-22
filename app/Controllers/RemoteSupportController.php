@@ -403,15 +403,48 @@ class RemoteSupportController extends Controller
             return;
         }
 
+        $sessionId = (int)$session['id'];
         $afterId = (int)($request->input('after_id') ?? 0);
-        $events = $this->remoteModel->getPendingControlEvents((int)$session['id'], $afterId);
+        $latestId = $this->remoteModel->getLatestControlEventId($sessionId);
 
         // Update heartbeat passively
-        $this->remoteModel->updateAgentHeartbeat((int)$session['id']);
+        $this->remoteModel->updateAgentHeartbeat($sessionId);
+
+        // When agent first starts (after_id == 0), sync directly to latest ID to skip stale backlog
+        if ($afterId === 0) {
+            $response->json([
+                'success' => true,
+                'events'  => [],
+                'latest_id' => $latestId,
+                'session_status' => $session['status']
+            ]);
+            return;
+        }
+
+        $events = $this->remoteModel->getPendingControlEvents($sessionId, $afterId);
+
+        // Coalesce high-frequency MOUSE_MOVE events so the queue never lags behind
+        $filteredEvents = [];
+        $lastMouseMove = null;
+        foreach ($events as $ev) {
+            if ($ev['event_type'] === 'MOUSE_MOVE') {
+                $lastMouseMove = $ev;
+            } else {
+                if ($lastMouseMove !== null) {
+                    $filteredEvents[] = $lastMouseMove;
+                    $lastMouseMove = null;
+                }
+                $filteredEvents[] = $ev;
+            }
+        }
+        if ($lastMouseMove !== null) {
+            $filteredEvents[] = $lastMouseMove;
+        }
 
         $response->json([
             'success' => true,
-            'events'  => $events,
+            'events'  => $filteredEvents,
+            'latest_id' => $latestId,
             'session_status' => $session['status']
         ]);
     }

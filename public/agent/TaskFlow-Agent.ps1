@@ -44,10 +44,8 @@ public class Win32Input {
         uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
         uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
         mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTDOWN, nx, ny, 0, 0);
-        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-        System.Threading.Thread.Sleep(35);
+        System.Threading.Thread.Sleep(25);
         mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTUP, nx, ny, 0, 0);
-        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
     }
 
     public static void DoubleClick(int x, int y, int sw, int sh) {
@@ -61,10 +59,8 @@ public class Win32Input {
         uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
         uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
         mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_RIGHTDOWN, nx, ny, 0, 0);
-        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-        System.Threading.Thread.Sleep(35);
+        System.Threading.Thread.Sleep(25);
         mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_RIGHTUP, nx, ny, 0, 0);
-        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
     }
 
     public static void MouseDown(int x, int y, int sw, int sh) {
@@ -72,7 +68,6 @@ public class Win32Input {
         uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
         uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
         mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTDOWN, nx, ny, 0, 0);
-        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
     }
 
     public static void MouseUp(int x, int y, int sw, int sh) {
@@ -80,7 +75,6 @@ public class Win32Input {
         uint nx = (uint)Math.Round((double)x * 65535.0 / (double)(sw > 0 ? sw : 1920));
         uint ny = (uint)Math.Round((double)y * 65535.0 / (double)(sh > 0 ? sh : 1080));
         mouse_event(MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTUP, nx, ny, 0, 0);
-        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
     }
 
     public static void MoveCursor(int x, int y, int sw, int sh) {
@@ -256,10 +250,19 @@ while ($true) {
                 break
             }
 
+            if ($lastId -eq 0 -and $resp.latest_id) {
+                $lastId = [int]$resp.latest_id
+                continue
+            }
+
             foreach ($ev in $resp.events) {
                 $lastId = [Math]::Max($lastId, [int]$ev.id)
                 $type = $ev.event_type
-                $p = $ev.payload | ConvertFrom-Json
+                if ($ev.payload -is [string]) {
+                    $p = $ev.payload | ConvertFrom-Json
+                } else {
+                    $p = $ev.payload
+                }
 
                 # MOUSE MOVE
                 if ($type -eq 'MOUSE_MOVE') {
