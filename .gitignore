@@ -1,0 +1,30 @@
+# ==========================================
+# Git Ignore for IT Service Desk System
+# ==========================================
+
+# Large Binaries & Executables
+cloudflared.exe
+*.exe
+*.dll
+
+# IDE / Editor Temporary Files & Local History
+.history/
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment Configuration Files
+.env
+.env.local
+.env.*.local
+
+# Logs and system caches
+*.log
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Operating System Files
+Thumbs.db
+Desktop.ini
+.DS_Store

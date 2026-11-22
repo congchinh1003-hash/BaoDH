@@ -1,0 +1,29 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Prevent directory browsing
+    Options -Indexes
+
+    # Allow direct access to public/ if prefixed
+    RewriteRule ^public/(.*)$ public/$1 [L]
+
+    # Check if file exists inside public/ (e.g. css, js, uploads)
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Block direct web access to internal application directories
+    RewriteRule ^(app|database|storage|cron)/ - [F,L]
+
+    # If file exists at root, serve directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Otherwise forward all requests to public/index.php front controller
+    RewriteRule ^(.*)$ public/index.php [QSA,L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    DirectoryIndex index.php public/index.php
+</IfModule>

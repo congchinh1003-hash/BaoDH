@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ Đồ Cơ Sở Dữ Liệu IT Service Desk - Word Ready</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body { background: #f8fafc; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding-bottom: 80px; }
+        .erd-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 30px; overflow: hidden; }
+        .erd-header { background: #f1f5f9; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 1.1rem; color: #0f172a; display: flex; align-items: center; justify-content: space-between; }
+        .erd-body { padding: 24px; overflow-x: auto; background: #ffffff; }
+        .tip-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+<div class="container py-4">
+    <div class="mb-4">
+        <h2 class="fw-bold text-primary">Sơ Đồ Thực Thể Liên Kết (ERD) - Cơ Sở Dữ Liệu IT Service Desk</h2>
+        <p class="text-muted">Tài liệu phục vụ Báo cáo Khóa luận / Đồ án Tốt nghiệp & Chèn trực tiếp vào Microsoft Word.</p>
+        <div class="tip-box">
+            💡 <strong>Mẹo chèn vào Word:</strong> Bạn có thể nhấp chuột phải vào từng sơ đồ đồ họa bên dưới &rarr; chọn <strong>"Sao chép hình ảnh" (Copy Image)</strong> &rarr; dán trực tiếp (<code>Ctrl + V</code>) vào Microsoft Word để có chất lượng hình ảnh sắc nét nhất, không bị nhòe vỡ chữ!
+        </div>
+    </div>
+
+    <!-- Phân hệ 1 -->
+    <div class="erd-card">
+        <div class="erd-header">
+            <span>1. Phân Hệ Người Dùng, Vai Trò & Phân Quyền (RBAC & IT Groups)</span>
+            <span class="badge bg-primary">8 Bảng liên kết</span>
+        </div>
+        <div class="erd-body">
+            <div class="mermaid">
+erDiagram
+    roles ||--o{ user_roles : "gán cho"
+    users ||--o{ user_roles : "thuộc vai trò"
+    roles ||--o{ role_permissions : "có quyền"
+    permissions ||--o{ role_permissions : "được cấp"
+    it_groups ||--o{ it_group_members : "chứa kỹ thuật viên"
+    users ||--o{ it_group_members : "tham gia nhóm"
+    users ||--o{ it_groups : "làm trưởng nhóm (leader)"
+    users ||--o{ audit_logs : "thực hiện hành vi"
+
+    users {
+        int id PK
+        varchar username
+        varchar email
+        varchar full_name
+        varchar department
+    }
+    roles {
+        int id PK
+        varchar code
+        varchar name
+    }
+    user_roles {
+        int user_id PK,FK
+        int role_id PK,FK
+    }
+    permissions {
+        int id PK
+        varchar code
+        varchar name
+        varchar module
+    }
+    role_permissions {
+        int role_id PK,FK
+        int permission_id PK,FK
+    }
+    it_groups {
+        int id PK
+        varchar code
+        varchar name
+        int leader_id FK
+    }
+    it_group_members {
+        int id PK
+        int group_id FK
+        int user_id FK
+    }
+    audit_logs {
+        int id PK
+        int user_id FK
+        varchar action
+        datetime created_at
+    }
+            </div>
+        </div>
+    </div>
+
+    <!-- Phân hệ 2 -->
+    <div class="erd-card">
+        <div class="erd-header">
+            <span>2. Phân Hệ Lõi Phiếu Hỗ Trợ Kỹ Thuật (Tickets & Workflows)</span>
+            <span class="badge bg-success">15 Bảng liên kết</span>
+        </div>
+        <div class="erd-body">
+            <div class="mermaid">
+erDiagram
+    users ||--o{ tickets : "người yêu cầu (requester)"
+    users ||--o{ tickets : "người xử lý (assignee)"
+    ticket_categories ||--o{ tickets : "phân loại"
+    ticket_services ||--o{ tickets : "chọn dịch vụ"
+    ticket_priorities ||--o{ tickets : "mức ưu tiên"
+    it_groups ||--o{ tickets : "nhóm phụ trách"
+    sla_configs ||--o{ tickets : "ràng buộc SLA"
+
+    ticket_categories ||--o{ ticket_services : "chứa"
+    ticket_priorities ||--o{ sla_configs : "áp đặt thời hạn"
+
+    tickets ||--o{ ticket_comments : "bình luận"
+    users ||--o{ ticket_comments : "viết bởi"
+
+    tickets ||--o{ ticket_attachments : "đính kèm"
+    users ||--o{ ticket_attachments : "tải lên"
+
+    tickets ||--o{ ticket_assignments : "lịch sử phân công"
+    tickets ||--o{ ticket_transfers : "lịch sử chuyển nhóm"
+    tickets ||--o{ ticket_history : "nhật ký biến động"
+    tickets ||--o{ ticket_approvals : "phê duyệt quản lý"
+    tickets ||--o{ ticket_worklogs : "log thời gian"
+    tickets ||--o{ ticket_ratings : "đánh giá CSAT"
+    tickets ||--o{ ticket_sla_pauses : "tạm dừng SLA"
+
+    tickets {
+        int id PK
+        varchar ticket_code
+        varchar title
+        varchar status
+        int requester_id FK
+        int assignee_id FK
+        int category_id FK
+        int service_id FK
+        int priority_id FK
+        int group_id FK
+        int sla_id FK
+        datetime sla_due_at
+    }
+    ticket_categories {
+        int id PK
+        varchar name
+        int default_group_id FK
+    }
+    ticket_services {
+        int id PK
+        varchar name
+        int category_id FK
+    }
+    ticket_priorities {
+        int id PK
+        varchar code
+        varchar name
+    }
+    sla_configs {
+        int id PK
+        int priority_id FK
+        int resolution_time
+        varchar resolution_unit
+    }
+    ticket_comments {
+        int id PK
+        int ticket_id FK
+        int user_id FK
+        tinyint is_internal
+        text content
+    }
+    ticket_attachments {
+        int id PK
+        int ticket_id FK
+        varchar file_name
+        varchar file_path
+    }
+    ticket_approvals {
+        int id PK
+        int ticket_id FK
+        int approver_id FK
+        varchar status
+    }
+    ticket_worklogs {
+        int id PK
+        int ticket_id FK
+        int user_id FK
+        int time_spent_minutes
+    }
+    ticket_ratings {
+        int id PK
+        int ticket_id FK
+        int user_id FK
+        int score
+    }
+            </div>
+        </div>
+    </div>
+
+    <!-- Phân hệ 3 -->
+    <div class="erd-card">
+        <div class="erd-header">
+            <span>3. Phân Hệ ITIL: Quản Lý Vấn Đề (Problem) & Thay Đổi (Change RFC)</span>
+            <span class="badge bg-warning text-dark">4 Bảng liên kết</span>
+        </div>
+        <div class="erd-body">
+            <div class="mermaid">
+erDiagram
+    problems ||--o{ problem_incidents : "gom sự cố"
+    tickets ||--o{ problem_incidents : "sự cố liên quan"
+    users ||--o{ problems : "tạo bởi"
+    users ||--o{ problems : "chuyên gia giải quyết"
+
+    change_requests ||--o{ change_tickets : "giải quyết sự cố"
+    tickets ||--o{ change_tickets : "kích hoạt thay đổi"
+    users ||--o{ change_requests : "đề xuất thay đổi"
+    users ||--o{ change_requests : "thực thi thay đổi"
+    users ||--o{ change_requests : "CAB phê duyệt"
+
+    problems {
+        int id PK
+        varchar problem_code
+        varchar title
+        text root_cause
+        text workaround
+        varchar status
+        int created_by FK
+        int assigned_to FK
+    }
+    problem_incidents {
+        int id PK
+        int problem_id FK
+        int ticket_id FK
+    }
+    change_requests {
+        int id PK
+        varchar change_code
+        varchar title
+        varchar change_type
+        varchar risk_level
+        varchar status
+        int requested_by FK
+        int assigned_to FK
+        int cab_approved_by FK
+    }
+    change_tickets {
+        int id PK
+        int change_id FK
+        int ticket_id FK
+    }
+            </div>
+        </div>
+    </div>
+
+    <!-- Phân hệ 4 -->
+    <div class="erd-card">
+        <div class="erd-header">
+            <span>4. Phân Hệ Quản Trị Tài Sản ITAM & Cổng Máy Chủ Bastion PAM</span>
+            <span class="badge bg-info text-dark">9 Bảng liên kết</span>
+        </div>
+        <div class="erd-body">
+            <div class="mermaid">
+erDiagram
+    asset_categories ||--o{ assets : "loại thiết bị"
+    users ||--o{ assets : "đang sử dụng"
+    assets ||--o{ ticket_assets : "gắn vào phiếu"
+    tickets ||--o{ ticket_assets : "phiếu liên quan"
+    assets ||--o{ asset_handovers : "bàn giao"
+    assets ||--o{ asset_repairs : "sửa chữa"
+
+    assets ||--o{ jump_servers : "máy chủ vật lý/ảo"
+    jump_servers ||--o{ jump_server_sessions : "phiên kết nối"
+    users ||--o{ jump_server_sessions : "kỹ thuật viên remote"
+    jump_server_sessions ||--o{ jump_command_logs : "lịch sử lệnh"
+    jump_servers ||--o{ jump_server_permissions : "phân quyền truy cập"
+    it_groups ||--o{ jump_server_permissions : "nhóm được phép"
+
+    assets {
+        int id PK
+        varchar asset_code
+        varchar name
+        int category_id FK
+        int current_user_id FK
+        varchar status
+    }
+    asset_categories {
+        int id PK
+        varchar code
+        varchar name
+    }
+    asset_handovers {
+        int id PK
+        int asset_id FK
+        varchar action_type
+        int from_user_id FK
+        int to_user_id FK
+        int performed_by FK
+    }
+    asset_repairs {
+        int id PK
+        int asset_id FK
+        decimal cost
+        int performed_by FK
+    }
+    jump_servers {
+        int id PK
+        varchar name
+        varchar ip_address
+        int asset_id FK
+        varchar protocol
+    }
+    jump_server_sessions {
+        int id PK
+        int server_id FK
+        int user_id FK
+        varchar client_ip
+        datetime started_at
+    }
+    jump_command_logs {
+        int id PK
+        int session_id FK
+        text command
+        datetime created_at
+    }
+            </div>
+        </div>
+    </div>
+
+    <!-- Phân hệ 5 -->
+    <div class="erd-card">
+        <div class="erd-header">
+            <span>5. Phân Hệ Quản Lý Dự Án Agile & Kiểm Thử (TaskFlow ALM)</span>
+            <span class="badge bg-secondary">4 Bảng liên kết</span>
+        </div>
+        <div class="erd-body">
+            <div class="mermaid">
+erDiagram
+    users ||--o{ projects : "project lead"
+    projects ||--o{ project_members : "thành viên dự án"
+    users ||--o{ project_members : "tham gia"
+    projects ||--o{ project_issues : "chứa hạng mục công việc"
+    users ||--o{ project_issues : "người báo cáo (reporter)"
+    users ||--o{ project_issues : "người nhận việc (assignee)"
+    project_issues ||--o{ project_issues : "công việc cha con (parent)"
+    project_issues ||--o{ project_issue_comments : "thảo luận"
+    users ||--o{ project_issue_comments : "người bình luận"
+
+    projects {
+        int id PK
+        varchar project_key
+        varchar name
+        int lead_id FK
+        varchar status
+    }
+    project_members {
+        int id PK
+        int project_id FK
+        int user_id FK
+        varchar role
+    }
+    project_issues {
+        int id PK
+        int project_id FK
+        varchar issue_key
+        varchar issue_type
+        varchar summary
+        varchar status
+        int parent_id FK
+        int reporter_id FK
+        int assignee_id FK
+    }
+    project_issue_comments {
+        int id PK
+        int issue_id FK
+        int user_id FK
+        text content
+    }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        er: {
+            useMaxWidth: false,
+            layoutDirection: 'TB'
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{
+  "shots": {
+    "01_login": "http://localhost:8766/login",
+    "02_user": "http://localhost:8766/dashboard",
+    "03_catalog": "http://localhost:8766/catalog",
+    "04_kb": "http://localhost:8766/kb",
+    "05_create": "http://localhost:8766/tickets/create",
+    "06_ticket_new": "http://localhost:8766/tickets/64",
+    "07_queue": "http://localhost:8766/staff/work-queue",
+    "08_unassigned": "http://localhost:8766/tickets/unassigned",
+    "09_ticket_processing": "http://localhost:8766/tickets/64",
+    "10_ticket_resolved": "http://localhost:8766/tickets/64",
+    "11_ticket_closed": "http://localhost:8766/tickets/64",
+    "12_manager": "http://localhost:8766/manager/dashboard",
+    "13_reports": "http://localhost:8766/reports",
+    "14_approvals": "http://localhost:8766/approvals",
+    "15_assets": "http://localhost:8766/assets",
+    "16_problems": "http://localhost:8766/problems",
+    "17_changes": "http://localhost:8766/changes",
+    "18_projects": "http://localhost:8766/projects",
+    "19_sla": "http://localhost:8766/admin/sla",
+    "20_permissions": "http://localhost:8766/admin/permissions",
+    "21_audit": "http://localhost:8766/admin/audit-logs",
+    "22_backup": "http://localhost:8766/admin/backups",
+    "23_board": "http://localhost:8766/tickets/board",
+    "24_myassets": "http://localhost:8766/my-assets",
+    "25_assetdetail": "http://localhost:8766/assets/9",
+    "26_problemdetail": "http://localhost:8766/problems/15",
+    "27_changedetail": "http://localhost:8766/changes/13",
+    "28_kbdetail": "http://localhost:8766/kb/18",
+    "proj_board": "http://localhost:8766/projects/10/board",
+    "proj_backlog": "http://localhost:8766/projects/10/backlog",
+    "proj_bugs": "http://localhost:8766/projects/10/bugs",
+    "proj_testcases": "http://localhost:8766/projects/10/testcases"
+  },
+  "ticket": "64",
+  "workflow": [
+    [
+      "take",
+      "ASSIGNED",
+      "ASSIGNED"
+    ],
+    [
+      "status",
+      "IN_PROGRESS",
+      "IN_PROGRESS"
+    ],
+    [
+      "status",
+      "WAITING_USER",
+      "WAITING_USER"
+    ],
+    [
+      "comment",
+      "IN_PROGRESS",
+      "IN_PROGRESS"
+    ],
+    [
+      "resolve",
+      "RESOLVED",
+      "RESOLVED"
+    ],
+    [
+      "confirm-close",
+      "CLOSED",
+      "CLOSED"
+    ]
+  ],
+  "approval": "APPROVED"
+}

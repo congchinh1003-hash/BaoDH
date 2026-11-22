@@ -1,0 +1,5 @@
+.git
+.history
+cloudflared.exe
+*.log
+.env
