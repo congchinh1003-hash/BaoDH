@@ -5,6 +5,13 @@ use App\Core\Session;
 
 $baseUrl = Response::baseUrl();
 $user = Auth::user();
+
+$isHttps = (
+    (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+    (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
+    (isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'onrender.com'))
+);
+$currentHost = ($isHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com');
 ?>
 
 <div class="container-fluid py-2 px-3">
@@ -102,7 +109,7 @@ $user = Auth::user();
                                     <a href="/remote-support/download-agent/<?= htmlspecialchars($session['session_code']) ?>" class="btn btn-success btn-sm fw-bold">
                                         <i class="bi bi-download me-1"></i> Tải Agent Điều Khiển (TaskFlow-Agent.bat)
                                     </a>
-                                    <button type="button" class="btn btn-outline-light btn-sm" onclick="navigator.clipboard.writeText('powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $s=\'<?= htmlspecialchars($session['session_code']) ?>\'; iex (irm \'https://baodh.onrender.com/public/agent/TaskFlow-Agent.ps1\')&quot;'); alert('Đã copy lệnh PowerShell! Bạn có thể dán vào PowerShell và Enter để chạy.');">
+                                    <button type="button" class="btn btn-outline-light btn-sm" onclick="navigator.clipboard.writeText('powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $s=\'<?= htmlspecialchars($session['session_code']) ?>\'; $h=\'<?= $currentHost ?>\'; iex (irm \'<?= $currentHost ?>/public/agent/TaskFlow-Agent.ps1\')&quot;'); alert('Đã copy lệnh PowerShell! Bạn có thể dán vào PowerShell và Enter để chạy.');">
                                         <i class="bi bi-terminal me-1"></i> Copy Lệnh PowerShell
                                     </button>
                                 </div>
@@ -133,6 +140,24 @@ $user = Auth::user();
                     <!-- Realtime Keystroke Feedback Badge for Staff -->
                     <div id="keyFeedbackBadge" class="position-absolute top-0 start-50 translate-middle-x mt-5 px-3 py-1 bg-dark bg-opacity-90 text-warning font-monospace rounded-pill border border-warning shadow d-none" style="z-index: 50; font-size: 0.85rem; pointer-events: none;">
                         <i class="bi bi-keyboard me-1"></i> <span id="keyFeedbackText"></span>
+                    </div>
+
+                    <!-- Offline Warning Popup when IT clicks without Agent -->
+                    <div id="staffAgentOfflineNotice" class="position-absolute top-50 start-50 translate-middle p-4 bg-dark bg-opacity-95 text-white rounded-3 border border-warning shadow text-center d-none" style="z-index: 35; max-width: 480px; width: 92%;">
+                        <div class="mb-2"><i class="bi bi-exclamation-triangle-fill text-warning fs-2"></i></div>
+                        <h6 class="fw-bold text-warning mb-1">Agent Điều Khiển Chưa Chạy Trên Máy Tính!</h6>
+                        <p class="small text-light text-opacity-75 mb-3" style="font-size:0.8rem;">
+                            Để có thể bấm chuột và gõ phím trực tiếp vào Windows, máy khách chỉ cần tải file Agent bên dưới và nhấp đúp để mở (không cần cài đặt):
+                        </p>
+                        <div class="d-flex flex-column gap-2 mb-2">
+                            <a href="/remote-support/download-agent/<?= htmlspecialchars($session['session_code']) ?>" class="btn btn-success btn-sm fw-bold">
+                                <i class="bi bi-download me-1"></i> Tải TaskFlow-Agent.bat (Mở là chạy)
+                            </a>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="navigator.clipboard.writeText('powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $s=\'<?= htmlspecialchars($session['session_code']) ?>\'; $h=\'<?= $currentHost ?>\'; iex (irm \'<?= $currentHost ?>/public/agent/TaskFlow-Agent.ps1\')&quot;'); alert('Đã copy lệnh PowerShell! Dán vào PowerShell và Enter để chạy.');">
+                                <i class="bi bi-terminal me-1"></i> Copy Lệnh PowerShell 1 Dòng
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-link btn-sm text-muted text-decoration-none" onclick="document.getElementById('staffAgentOfflineNotice').classList.add('d-none')">Đóng thông báo</button>
                     </div>
 
                     <!-- Quick Hotkeys Bar for Staff -->
@@ -269,7 +294,7 @@ $user = Auth::user();
                                 <i class="bi bi-download me-1"></i> Tải TaskFlow-Agent.bat
                             </a>
                             <div class="small text-muted font-monospace bg-white p-1 rounded border text-break" style="font-size:0.68rem;">
-                                irm https://baodh.onrender.com/public/agent/TaskFlow-Agent.ps1 | iex
+                                irm <?= $currentHost ?>/public/agent/TaskFlow-Agent.ps1 | iex
                             </div>
                         </div>
 
@@ -652,14 +677,16 @@ $user = Auth::user();
 
     // STAFF: Remote Control & Laser Pointer Handling
     let isControlEnabled = false;
+    let isAgentOnline = false;
     let lastMouseMoveTime = 0;
     const btnToggleControl = document.getElementById('btnToggleControl');
     const staffControlStatusBanner = document.getElementById('staffControlStatusBanner');
     const staffQuickKeysBar = document.getElementById('staffQuickKeysBar');
+    const staffAgentOfflineNotice = document.getElementById('staffAgentOfflineNotice');
 
     async function sendControlEvent(type, payload) {
         try {
-            await fetch(BASE_URL + '/remote-support/api/control/event', {
+            const resp = await fetch(BASE_URL + '/remote-support/api/control/event', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -672,9 +699,19 @@ $user = Auth::user();
                     _csrf_token: CSRF_TOKEN
                 })
             });
+            if (!resp.ok) {
+                console.warn('[RemoteControl] event response status:', resp.status);
+            }
         } catch (e) {
             console.error('[RemoteControl] sendControlEvent error:', e);
         }
+    }
+
+    function showAgentOfflineWarning() {
+        if (staffAgentOfflineNotice) {
+            staffAgentOfflineNotice.classList.remove('d-none');
+        }
+        showKeyToast('⚠️ Agent chưa chạy trên máy khách!');
     }
 
     if (btnToggleControl) {
@@ -699,6 +736,11 @@ $user = Auth::user();
                     btnToggleLaser.classList.remove('active', 'btn-warning');
                     btnToggleLaser.classList.add('btn-outline-warning');
                 }
+
+                // If agent is not running, prompt user immediately
+                if (!isAgentOnline) {
+                    showAgentOfflineWarning();
+                }
             } else {
                 this.className = 'btn btn-sm btn-outline-success rounded-pill fw-bold';
                 this.innerHTML = '<i class="bi bi-controller me-1"></i> Bật Điều Khiển (Remote Control)';
@@ -711,6 +753,9 @@ $user = Auth::user();
                     videoContainer.style.boxShadow = 'none';
                     videoContainer.style.cursor = 'crosshair';
                 }
+                if (staffAgentOfflineNotice) {
+                    staffAgentOfflineNotice.classList.add('d-none');
+                }
             }
         });
     }
@@ -719,6 +764,10 @@ $user = Auth::user();
     document.querySelectorAll('.quick-hotkey').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
+            if (!isAgentOnline) {
+                showAgentOfflineWarning();
+                return;
+            }
             const hk = this.getAttribute('data-hk');
             sendControlEvent('HOTKEY', { hotkey: hk });
             this.classList.add('btn-light', 'text-dark');
@@ -732,11 +781,15 @@ $user = Auth::user();
     if (btnDirectType && directTypeInput) {
         btnDirectType.addEventListener('click', function(e) {
             e.stopPropagation();
+            if (!isAgentOnline) {
+                showAgentOfflineWarning();
+                return;
+            }
             const txt = directTypeInput.value.trim();
             if (!txt) return;
             sendControlEvent('TEXT_INPUT', { text: txt });
             directTypeInput.value = '';
-            alert('Đã gửi văn bản sang máy khách!');
+            showKeyToast('Đã dán văn bản sang máy khách');
         });
     }
 
@@ -748,6 +801,9 @@ $user = Auth::user();
     let keyFeedbackTimer = null;
     let isMouseOverScreen = false;
     let isMouseDown = false;
+    let clickStartX = 0;
+    let clickStartY = 0;
+    let isDragging = false;
 
     function showKeyToast(label) {
         if (!keyFeedbackBadge || !keyFeedbackText) return;
@@ -768,21 +824,24 @@ $user = Auth::user();
         setTimeout(() => ripple.remove(), 450);
     }
 
-    // Accurate coordinate normalization removing letterbox & pillarbox black margins
+    // Accurate coordinate normalization removing letterbox & pillarbox margins
     function getNormalizedContentCoords(e) {
         const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
-        if (!targetElem) return null;
+        if (!targetElem) return { x: 0.5, y: 0.5, clientX: e.clientX, clientY: e.clientY };
 
         const rect = targetElem.getBoundingClientRect();
-        if (!rect.width || !rect.height) return null;
+        if (!rect.width || !rect.height) return { x: 0.5, y: 0.5, clientX: e.clientX, clientY: e.clientY };
 
         let contentLeft = 0;
         let contentTop = 0;
         let contentWidth = rect.width;
         let contentHeight = rect.height;
 
-        if (targetElem.tagName === 'VIDEO' && targetElem.videoWidth > 0 && targetElem.videoHeight > 0) {
-            const videoRatio = targetElem.videoWidth / targetElem.videoHeight;
+        const vW = (targetElem.tagName === 'VIDEO') ? targetElem.videoWidth : (targetElem.naturalWidth || 0);
+        const vH = (targetElem.tagName === 'VIDEO') ? targetElem.videoHeight : (targetElem.naturalHeight || 0);
+
+        if (vW > 0 && vH > 0) {
+            const videoRatio = vW / vH;
             const elemRatio = rect.width / rect.height;
             if (elemRatio > videoRatio) {
                 // Pillarbox: black bars on left & right
@@ -797,103 +856,128 @@ $user = Auth::user();
                 contentLeft = 0;
                 contentTop = (rect.height - contentHeight) / 2;
             }
-        } else if (targetElem.tagName === 'IMG' && targetElem.naturalWidth > 0 && targetElem.naturalHeight > 0) {
-            const imgRatio = targetElem.naturalWidth / targetElem.naturalHeight;
-            const elemRatio = rect.width / rect.height;
-            if (elemRatio > imgRatio) {
-                contentHeight = rect.height;
-                contentWidth = rect.height * imgRatio;
-                contentLeft = (rect.width - contentWidth) / 2;
-                contentTop = 0;
-            } else {
-                contentWidth = rect.width;
-                contentHeight = rect.width / imgRatio;
-                contentLeft = 0;
-                contentTop = (rect.height - contentHeight) / 2;
-            }
         }
 
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        // Check if clicked inside actual desktop image
-        if (mouseX < contentLeft || mouseX > contentLeft + contentWidth ||
-            mouseY < contentTop || mouseY > contentTop + contentHeight) {
-            return null; // clicked outside on black bars
-        }
-
-        const normX = Math.max(0, Math.min(1, (mouseX - contentLeft) / contentWidth));
-        const normY = Math.max(0, Math.min(1, (mouseY - contentTop) / contentHeight));
+        // Clamp to 0..1 so edge clicks are never dropped
+        const normX = Math.max(0, Math.min(1, (mouseX - contentLeft) / (contentWidth || 1)));
+        const normY = Math.max(0, Math.min(1, (mouseY - contentTop) / (contentHeight || 1)));
 
         return { x: normX, y: normY, clientX: e.clientX, clientY: e.clientY };
     }
 
     if (videoContainer && ROLE === 'STAFF') {
         videoContainer.addEventListener('mouseenter', () => { isMouseOverScreen = true; });
-        videoContainer.addEventListener('mouseleave', () => { isMouseOverScreen = false; isMouseDown = false; });
+        videoContainer.addEventListener('mouseleave', () => { isMouseOverScreen = false; isMouseDown = false; isDragging = false; });
 
         // Context Menu (Right Click)
         videoContainer.addEventListener('contextmenu', function(e) {
             if (isControlEnabled) {
                 e.preventDefault();
-                const coords = getNormalizedContentCoords(e);
-                if (coords) {
-                    showClickRipple(e.clientX, e.clientY, 'right');
-                    sendControlEvent('MOUSE_CLICK', { x: coords.x, y: coords.y, button: 'right' });
+                if (!isAgentOnline) {
+                    showAgentOfflineWarning();
+                    return;
                 }
+                const coords = getNormalizedContentCoords(e);
+                showClickRipple(e.clientX, e.clientY, 'right');
+                sendControlEvent('MOUSE_CLICK', { x: coords.x, y: coords.y, button: 'right' });
+                showKeyToast('Click Chuột Phải');
             }
         });
 
-        // Mouse Down (Left click / Drag start)
+        // Mouse Down (Left click start / Drag start)
         videoContainer.addEventListener('mousedown', function(e) {
-            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
-            const coords = getNormalizedContentCoords(e);
-            if (!coords) return;
+            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar') || e.target.closest('#staffAgentOfflineNotice')) return;
 
-            if (isControlEnabled) {
-                if (e.button === 0) {
-                    isMouseDown = true;
-                    showClickRipple(e.clientX, e.clientY, 'left');
-                    sendControlEvent('MOUSE_DOWN', { x: coords.x, y: coords.y });
+            const coords = getNormalizedContentCoords(e);
+
+            if (!isControlEnabled) {
+                if (isLaserEnabled) {
+                    drawStaffLaser(coords.x, coords.y);
+                    sendSignal('POINTER', { x: coords.x, y: coords.y });
+                } else {
+                    // Auto-enable control on direct click if user clicks on view
+                    if (btnToggleControl) btnToggleControl.click();
                 }
-            } else if (isLaserEnabled) {
-                drawStaffLaser(coords.x, coords.y);
-                sendSignal('POINTER', { x: coords.x, y: coords.y });
+                return;
+            }
+
+            e.preventDefault(); // Prevent native text select or image drag
+
+            if (!isAgentOnline) {
+                showAgentOfflineWarning();
+                return;
+            }
+
+            if (e.button === 0) {
+                isMouseDown = true;
+                isDragging = false;
+                clickStartX = e.clientX;
+                clickStartY = e.clientY;
+                showClickRipple(e.clientX, e.clientY, 'left');
             }
         });
 
         // Mouse Up (Left click release / Drag end)
         window.addEventListener('mouseup', function(e) {
-            if (isControlEnabled && isMouseDown) {
-                isMouseDown = false;
-                const coords = getNormalizedContentCoords(e);
-                sendControlEvent('MOUSE_UP', { x: coords ? coords.x : 0, y: coords ? coords.y : 0 });
+            if (!isControlEnabled || !isMouseDown) return;
+            isMouseDown = false;
+
+            if (!isAgentOnline) return;
+
+            const coords = getNormalizedContentCoords(e);
+
+            if (isDragging) {
+                // Drag ended
+                isDragging = false;
+                sendControlEvent('MOUSE_UP', { x: coords.x, y: coords.y });
+            } else {
+                // Atomic Single Left Click!
+                sendControlEvent('MOUSE_CLICK', { x: coords.x, y: coords.y, button: 'left' });
+                showKeyToast('Click Chuột Trái');
             }
         });
 
         // Double Click
         videoContainer.addEventListener('dblclick', function(e) {
-            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
+            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar') || e.target.closest('#staffAgentOfflineNotice')) return;
             if (isControlEnabled) {
-                const coords = getNormalizedContentCoords(e);
-                if (coords) {
-                    showClickRipple(e.clientX, e.clientY, 'double');
-                    sendControlEvent('MOUSE_CLICK', { x: coords.x, y: coords.y, button: 'left', double: true });
+                e.preventDefault();
+                if (!isAgentOnline) {
+                    showAgentOfflineWarning();
+                    return;
                 }
+                const coords = getNormalizedContentCoords(e);
+                showClickRipple(e.clientX, e.clientY, 'double');
+                sendControlEvent('MOUSE_CLICK', { x: coords.x, y: coords.y, button: 'left', double: true });
+                showKeyToast('Nhấp Đúp (Double Click)');
             }
         });
 
         // Mouse Move (Throttled to 50ms)
         videoContainer.addEventListener('mousemove', function(e) {
             if (!isControlEnabled) return;
-            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
+            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar') || e.target.closest('#staffAgentOfflineNotice')) return;
+
+            const coords = getNormalizedContentCoords(e);
+
+            // Drag detection
+            if (isMouseDown && !isDragging) {
+                if (Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY) > 8) {
+                    isDragging = true;
+                    if (isAgentOnline) {
+                        sendControlEvent('MOUSE_DOWN', { x: coords.x, y: coords.y });
+                    }
+                }
+            }
 
             const now = Date.now();
             if (now - lastMouseMoveTime < 50) return;
             lastMouseMoveTime = now;
 
-            const coords = getNormalizedContentCoords(e);
-            if (coords) {
+            if (isAgentOnline) {
                 sendControlEvent('MOUSE_MOVE', { x: coords.x, y: coords.y });
             }
         });
@@ -902,6 +986,10 @@ $user = Auth::user();
         videoContainer.addEventListener('wheel', function(e) {
             if (!isControlEnabled) return;
             e.preventDefault();
+            if (!isAgentOnline) {
+                showAgentOfflineWarning();
+                return;
+            }
             sendControlEvent('SCROLL', { deltaY: e.deltaY });
         }, { passive: false });
 
@@ -913,6 +1001,11 @@ $user = Auth::user();
 
             // Do not intercept if user is typing in a real input box (like chat or hotkey input)
             if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+
+            if (!isAgentOnline) {
+                showAgentOfflineWarning();
                 return;
             }
 
@@ -968,20 +1061,25 @@ $user = Auth::user();
         });
     }
 
-    // Check Agent Presence (Poll status every 2 seconds)
+    // Check Agent Presence (Poll status every 1.5 seconds)
     async function checkAgentStatus() {
         try {
             const res = await fetch(BASE_URL + '/remote-support/api/control/status/' + SESSION_CODE);
             const data = await res.json();
             if (data.success) {
+                isAgentOnline = !!data.online;
+
                 // Staff UI
                 if (ROLE === 'STAFF') {
-                    if (data.online) {
+                    if (isAgentOnline) {
                         if (staffControlStatusBanner) {
                             staffControlStatusBanner.classList.remove('d-none');
                             staffControlStatusBanner.classList.add('d-flex');
                             const resElem = document.getElementById('staffAgentRes');
                             if (resElem) resElem.textContent = data.resolution || '1920x1080';
+                        }
+                        if (staffAgentOfflineNotice) {
+                            staffAgentOfflineNotice.classList.add('d-none');
                         }
                     } else {
                         if (staffControlStatusBanner) staffControlStatusBanner.classList.add('d-none');
@@ -990,7 +1088,7 @@ $user = Auth::user();
                 // Client UI
                 const agentClientBadge = document.getElementById('agentClientBadge');
                 if (agentClientBadge) {
-                    if (data.online) {
+                    if (isAgentOnline) {
                         agentClientBadge.className = 'badge bg-success font-monospace';
                         agentClientBadge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Agent Đã Kết Nối (' + (data.resolution || '1920x1080') + ')';
                     } else {
@@ -1001,7 +1099,7 @@ $user = Auth::user();
             }
         } catch (e) {}
     }
-    setInterval(checkAgentStatus, 2000);
+    setInterval(checkAgentStatus, 1500);
     checkAgentStatus();
 
     // STAFF: Toggle Laser Button

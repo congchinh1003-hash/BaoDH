@@ -114,14 +114,6 @@ if (-not ([System.Management.Automation.PSTypeName]'Win32Input').Type) {
 if (-not $s) { $s = $sessionCode }
 if (-not $h) { $h = $hostUrl }
 
-if (-not $h) {
-    $h = "https://baodh.onrender.com"
-}
-# Ensure https if on render
-if ($h -match "onrender.com" -and $h.StartsWith("http://")) {
-    $h = $h.Replace("http://", "https://")
-}
-
 Clear-Host
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "       TASKFLOW ENTERPRISE REMOTE DESKTOP AGENT v2.0" -ForegroundColor Green
@@ -129,12 +121,26 @@ Write-Host "============================================================" -Foreg
 
 if (-not $s) {
     Write-Host ""
-    $s = Read-Host "Nhap Ma Phien Ket Noi hoac PIN 6 so (Vi du: 614045 hoac REM-614045)"
+    $s = Read-Host "Nhap Ma Phien Ket Noi hoac PIN 6 so (Vi du: 498181 hoac REM-498181)"
 }
 
 $s = $s.Trim().ToUpper()
 if (-not $s.StartsWith("REM-")) {
     $s = "REM-" + $s
+}
+
+if (-not $h) {
+    # Auto-detect local development server or cloud server
+    try {
+        $null = Invoke-RestMethod -Uri "http://localhost:3000/remote-support/api/control/status/$s" -TimeoutSec 1 -ErrorAction Stop
+        $h = "http://localhost:3000"
+    } catch {
+        $h = "https://baodh.onrender.com"
+    }
+}
+# Ensure https if on render
+if ($h -match "onrender.com" -and $h.StartsWith("http://")) {
+    $h = $h.Replace("http://", "https://")
 }
 
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
