@@ -1080,6 +1080,22 @@ $canManageTicket = $isStaffOrManager || Auth::isAdmin();
                                 </a>
                             <?php endif; ?>
                         </div>
+
+                        <!-- BUTTON noVNC REMOTE (TIGHTVNC + WEBSOCKIFY) -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-outline-danger w-100 p-2 text-start rounded-3 d-flex align-items-center justify-content-between action-tile border-danger-subtle" style="background:#FFF5F5;" id="btnOpenNovncModal">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="p-2 bg-danger text-white rounded-2">
+                                        <i class="bi bi-laptop fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-danger" style="font-size:0.8rem;">Điều Khiển noVNC (TightVNC)</div>
+                                        <div class="text-muted" style="font-size:0.68rem;">Request &rarr; Accept &rarr; Điều khiển toàn quyền</div>
+                                    </div>
+                                </div>
+                                <i class="bi bi-arrow-right text-danger"></i>
+                            </button>
+                        </div>
                     <?php endif; ?>
 
                     <!-- PHẦN 2: ĐIỀU PHỐI & PHỤ TRÁCH (2 CỘT GỌN GÀNG) -->
@@ -2555,5 +2571,162 @@ function updateChecklistProgress() {
         }
     });
 })();
+</script>
+
+<!-- ========================================================================= -->
+<!-- noVNC IT CONTROL MODAL & POLLING ENGINE (REQUEST -> ACCEPT -> CONTROL)    -->
+<!-- ========================================================================= -->
+<div class="modal fade" id="itNovncModal" tabindex="-1" data-bs-backdrop="static" aria-hidden="true" style="z-index: 1000000;">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95vw;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden bg-dark text-white">
+            <div class="modal-header bg-dark border-secondary py-2 px-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-danger"><i class="bi bi-display me-1"></i> noVNC Helpdesk</span>
+                    <h6 class="modal-title fw-bold text-white mb-0" id="itNovncTitle">Điều khiển máy khách: <?= htmlspecialchars($ticket['requester_name'] ?? 'User') ?></h6>
+                    <span class="badge bg-warning text-dark font-monospace" id="vncStatusBadge">Khởi tạo...</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-info" id="btnOpenVncNewTab" style="display:none;" title="Mở trong tab trình duyệt mới">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Mở Tab Mới
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-light" onclick="var f=document.getElementById('itNovncFrame'); if(f) f.src=f.src;">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Tải lại
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger fw-bold" id="btnCloseVncModal" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i> Đóng / Ngắt Kết Nối
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body p-0 position-relative" style="min-height: 80vh; background: #111;">
+                <!-- Step 1: Waiting for User Acceptance -->
+                <div id="vncWaitingBox" class="p-5 text-center position-absolute top-50 start-50 translate-middle w-100">
+                    <div class="spinner-border text-danger mb-3" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
+                    <h4 class="fw-bold text-white mb-2">Đang Đợi Người Dùng Chấp Nhận Yêu Cầu Điều Khiển...</h4>
+                    <p class="text-light text-opacity-75 small mb-3">
+                        Hệ thống đã gửi thông báo xác nhận tới màn hình của <strong><?= htmlspecialchars($ticket['requester_name'] ?? 'User') ?></strong>.<br>
+                        Khung điều khiển sẽ tự động mở ngay khi người dùng bấm <strong>"Chấp Nhận Cho Điều Khiển"</strong>.
+                    </p>
+                    <div class="p-3 bg-secondary bg-opacity-25 rounded-3 d-inline-block text-start border border-secondary" style="max-width: 520px; font-size: 0.8rem;">
+                        <div class="text-warning fw-bold mb-1"><i class="bi bi-info-circle me-1"></i> Yêu cầu kỹ thuật để kết nối noVNC:</div>
+                        <div>1. Máy khách đã bật <strong>TightVNC Server</strong> (Cổng 5900, mật khẩu <code>123456</code>).</div>
+                        <div>2. Cầu nối <strong>Websockify</strong> đang chạy (Cổng 6080): <code>start_novnc_bridge.bat</code>.</div>
+                        <div>3. Nếu test trên 1 máy: TightVNC Server Configuration &rarr; Access Control &rarr; tick <strong>"Allow loopback connections"</strong>.</div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Active noVNC Frame -->
+                <div id="vncFrameWrapper" class="w-100 h-100" style="display:none; min-height: 80vh;">
+                    <iframe id="itNovncFrame" src="about:blank" style="width: 100%; height: 80vh; border: none; border-radius: 0 0 16px 16px;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let vncSessionId = null;
+    let vncPollTimer = null;
+
+    const btnOpenNovncModal = document.getElementById('btnOpenNovncModal');
+    if (btnOpenNovncModal) {
+        btnOpenNovncModal.addEventListener('click', function() {
+            const modalEl = document.getElementById('itNovncModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+
+            // Reset UI
+            document.getElementById('vncWaitingBox').style.display = 'block';
+            document.getElementById('vncFrameWrapper').style.display = 'none';
+            document.getElementById('btnOpenVncNewTab').style.display = 'none';
+            document.getElementById('vncStatusBadge').className = 'badge bg-warning text-dark';
+            document.getElementById('vncStatusBadge').textContent = 'Đang gửi yêu cầu...';
+
+            // Step 1: Send request to PHP
+            fetch('<?= $baseUrl ?>/remote-support/vnc/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+                body: JSON.stringify({
+                    ticket_id: <?= (int)$ticket['id'] ?>,
+                    ws_url: 'http://127.0.0.1:6080/vnc_lite.html',
+                    session_pass: '123456',
+                    _csrf_token: '<?= csrf_token() ?>'
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    vncSessionId = data.session_id;
+                    document.getElementById('vncStatusBadge').textContent = 'Đang chờ User chấp nhận...';
+
+                    // Step 2: Poll session status every 2 seconds
+                    clearInterval(vncPollTimer);
+                    vncPollTimer = setInterval(pollVncSessionStatus, 2000);
+                } else {
+                    alert(data.message || 'Lỗi gửi yêu cầu');
+                }
+            })
+            .catch(err => {
+                alert('Lỗi kết nối máy chủ: ' + err.message);
+            });
+        });
+    }
+
+    function pollVncSessionStatus() {
+        if (!vncSessionId) return;
+        fetch('<?= $baseUrl ?>/remote-support/vnc/session-status/' + vncSessionId)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'accepted') {
+                    // User accepted! Open noVNC frame!
+                    clearInterval(vncPollTimer);
+                    document.getElementById('vncWaitingBox').style.display = 'none';
+                    document.getElementById('vncFrameWrapper').style.display = 'block';
+                    document.getElementById('btnOpenVncNewTab').style.display = 'inline-block';
+                    document.getElementById('btnOpenVncNewTab').onclick = function() {
+                        window.open(data.iframe_url, '_blank');
+                    };
+                    document.getElementById('vncStatusBadge').className = 'badge bg-success';
+                    document.getElementById('vncStatusBadge').textContent = 'ĐANG ĐIỀU KHIỂN (LIVE)';
+
+                    const frame = document.getElementById('itNovncFrame');
+                    if (frame.src === 'about:blank' || !frame.src.includes('6080')) {
+                        frame.src = data.iframe_url;
+                    }
+                } else if (data.status === 'rejected') {
+                    clearInterval(vncPollTimer);
+                    document.getElementById('vncStatusBadge').className = 'badge bg-danger';
+                    document.getElementById('vncStatusBadge').textContent = 'Người dùng từ chối';
+                    alert('Người dùng đã từ chối yêu cầu điều khiển từ xa.');
+                    bootstrap.Modal.getInstance(document.getElementById('itNovncModal')).hide();
+                } else if (data.status === 'ended') {
+                    clearInterval(vncPollTimer);
+                    document.getElementById('vncStatusBadge').className = 'badge bg-secondary';
+                    document.getElementById('vncStatusBadge').textContent = 'Phiên đã kết thúc';
+                    document.getElementById('itNovncFrame').src = 'about:blank';
+                    document.getElementById('vncFrameWrapper').style.display = 'none';
+                    document.getElementById('vncWaitingBox').style.display = 'block';
+                    document.getElementById('vncWaitingBox').innerHTML = '<h5 class="text-warning">Phiên điều khiển đã kết thúc bởi người dùng</h5>';
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Close / End button
+    const btnCloseVncModal = document.getElementById('btnCloseVncModal');
+    if (btnCloseVncModal) {
+        btnCloseVncModal.addEventListener('click', function() {
+            clearInterval(vncPollTimer);
+            if (vncSessionId) {
+                fetch('<?= $baseUrl ?>/remote-support/vnc/end', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+                    body: JSON.stringify({ session_id: vncSessionId, _csrf_token: '<?= csrf_token() ?>' })
+                });
+            }
+            document.getElementById('itNovncFrame').src = 'about:blank';
+        });
+    }
+});
 </script>
 

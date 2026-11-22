@@ -62,8 +62,23 @@ class RemoteSession extends Model
                     INDEX `idx_ctrl_sess` (`session_id`, `id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
+            $db->exec("
+                CREATE TABLE IF NOT EXISTS `remote_sessions` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `ticket_id` INT NOT NULL,
+                    `it_id` INT NOT NULL,
+                    `enduser_id` INT NOT NULL,
+                    `ws_url` VARCHAR(255) NOT NULL DEFAULT 'ws://127.0.0.1:6080',
+                    `session_pass` VARCHAR(50) NOT NULL DEFAULT '123456',
+                    `status` ENUM('pending', 'accepted', 'rejected', 'ended') DEFAULT 'pending',
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_rs_ticket` (`ticket_id`),
+                    INDEX `idx_rs_status` (`status`),
+                    INDEX `idx_rs_user` (`enduser_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
             try {
-                $db->exec("ALTER TABLE `remote_support_sessions` ADD COLUMN `agent_online` TINYINT(1) DEFAULT 0, ADD COLUMN `agent_resolution` VARCHAR(30) NULL, ADD COLUMN `agent_last_seen` DATETIME NULL");
+                $db->exec("ALTER TABLE `remote_support_sessions` ADD COLUMN `agent_online` TINYINT(1) DEFAULT 0, ADD COLUMN `agent_resolution` VARCHAR(30) NULL, ADD COLUMN `agent_last_seen` DATETIME NULL, ADD COLUMN `ws_url` VARCHAR(255) NULL, ADD COLUMN `session_pass` VARCHAR(50) NULL");
             } catch (\Throwable $e) {}
         } catch (\Throwable $e) {
             error_log("RemoteSession ensureTablesExist notice: " . $e->getMessage());
@@ -317,5 +332,79 @@ class RemoteSession extends Model
             'online'     => (bool)($res['is_active'] ?? false),
             'resolution' => $res['agent_resolution'] ?? '1920x1080'
         ];
+    }
+
+    // =========================================================================
+    // noVNC / TightVNC WEBSOCKIFY INTEGRATION (REQUEST -> ACCEPT -> CONTROL)
+    // =========================================================================
+
+    public function createVncRequest(int $ticketId, int $itId, int $enduserId, string $wsUrl = 'http://127.0.0.1:6080/vnc_lite.html', string $pass = '123456'): int
+    {
+        // Cancel existing pending requests for this ticket
+        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'ended' WHERE ticket_id = :tid AND status = 'pending'");
+        $stmt->execute(['tid' => $ticketId]);
+
+        $stmt = $this->db->prepare("
+            INSERT INTO remote_sessions (ticket_id, it_id, enduser_id, ws_url, session_pass, status)
+            VALUES (:ticket_id, :it_id, :enduser_id, :ws_url, :session_pass, 'pending')
+        ");
+        $stmt->execute([
+            'ticket_id'    => $ticketId,
+            'it_id'        => $itId,
+            'enduser_id'   => $enduserId,
+            'ws_url'       => $wsUrl,
+            'session_pass' => $pass
+        ]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function getPendingVncRequestForUser(int $userId): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT rs.*, u.full_name as it_name, t.title as ticket_title, t.ticket_code
+            FROM remote_sessions rs
+            JOIN users u ON rs.it_id = u.id
+            JOIN tickets t ON rs.ticket_id = t.id
+            WHERE rs.enduser_id = :uid AND rs.status = 'pending'
+            ORDER BY rs.id DESC LIMIT 1
+        ");
+        $stmt->execute(['uid' => $userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function updateVncStatus(int $id, string $status): bool
+    {
+        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = :status WHERE id = :id");
+        return $stmt->execute(['status' => $status, 'id' => $id]);
+    }
+
+    public function getVncSession(int $id): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT rs.*, u.full_name as it_name, eu.full_name as enduser_name, t.title as ticket_title, t.ticket_code
+            FROM remote_sessions rs
+            JOIN users u ON rs.it_id = u.id
+            JOIN users eu ON rs.enduser_id = eu.id
+            JOIN tickets t ON rs.ticket_id = t.id
+            WHERE rs.id = :id
+        ");
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function getActiveVncForTicket(int $ticketId): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT rs.*, u.full_name as it_name
+            FROM remote_sessions rs
+            JOIN users u ON rs.it_id = u.id
+            WHERE rs.ticket_id = :tid AND rs.status IN ('pending', 'accepted')
+            ORDER BY rs.id DESC LIMIT 1
+        ");
+        $stmt->execute(['tid' => $ticketId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 }

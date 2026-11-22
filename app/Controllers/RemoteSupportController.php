@@ -549,4 +549,168 @@ class RemoteSupportController extends Controller
         echo $batContent;
         exit;
     }
+
+    // =========================================================================
+    // noVNC + WEBSOCKIFY + TIGHTVNC METHODS (REQUEST -> ACCEPT -> CONTROL)
+    // =========================================================================
+
+    /**
+     * IT requests remote control for a ticket
+     */
+    public function vncRequest(Request $request, Response $response): void
+    {
+        $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $body = $decoded;
+            }
+        }
+
+        $ticketId = (int)($body['ticket_id'] ?? 0);
+        $wsUrl = trim($body['ws_url'] ?? 'http://127.0.0.1:6080/vnc_lite.html');
+        $sessionPass = trim($body['session_pass'] ?? '123456');
+
+        if (!$ticketId) {
+            $response->json(['success' => false, 'message' => 'Thiếu ID Ticket'], 400);
+            return;
+        }
+
+        $ticketModel = new Ticket();
+        $ticket = $ticketModel->findById($ticketId);
+        if (!$ticket) {
+            $response->json(['success' => false, 'message' => 'Không tìm thấy Ticket'], 404);
+            return;
+        }
+
+        $itUser = Auth::user();
+        $enduserId = (int)$ticket['requester_id'];
+
+        $sessionId = $this->remoteModel->createVncRequest($ticketId, (int)$itUser['id'], $enduserId, $wsUrl, $sessionPass);
+
+        // Notify enduser via in-app notification
+        $notif = new Notification();
+        $notif->create([
+            'user_id'   => $enduserId,
+            'ticket_id' => $ticketId,
+            'title'     => "🖥️ Yêu cầu điều khiển noVNC từ IT {$itUser['full_name']}",
+            'message'   => "Kỹ thuật viên muốn điều khiển máy tính của bạn qua noVNC để xử lý sự cố. Vui lòng bấm để chấp nhận.",
+            'type'      => 'remote',
+            'link'      => "/tickets/{$ticketId}"
+        ]);
+
+        $response->json([
+            'success'    => true,
+            'session_id' => $sessionId,
+            'message'    => 'Đã gửi yêu cầu điều khiển tới người dùng'
+        ]);
+    }
+
+    /**
+     * Enduser checks for incoming noVNC requests (AJAX polling every 2s)
+     */
+    public function vncCheckRequest(Request $request, Response $response): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            $response->json(['has_request' => false]);
+            return;
+        }
+
+        $pending = $this->remoteModel->getPendingVncRequestForUser((int)$user['id']);
+        if ($pending) {
+            $response->json([
+                'has_request' => true,
+                'request'     => $pending
+            ]);
+        } else {
+            $response->json(['has_request' => false]);
+        }
+    }
+
+    /**
+     * Enduser responds (accept / reject)
+     */
+    public function vncRespond(Request $request, Response $response): void
+    {
+        $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $body = $decoded;
+            }
+        }
+
+        $sessionId = (int)($body['session_id'] ?? 0);
+        $action = trim($body['action'] ?? ''); // 'accept' or 'reject'
+
+        if (!$sessionId || !in_array($action, ['accept', 'reject'])) {
+            $response->json(['success' => false, 'message' => 'Tham số không hợp lệ'], 400);
+            return;
+        }
+
+        $session = $this->remoteModel->getVncSession($sessionId);
+        if (!$session) {
+            $response->json(['success' => false, 'message' => 'Không tìm thấy phiên'], 404);
+            return;
+        }
+
+        $newStatus = ($action === 'accept') ? 'accepted' : 'rejected';
+        $this->remoteModel->updateVncStatus($sessionId, $newStatus);
+
+        $response->json([
+            'success' => true,
+            'status'  => $newStatus
+        ]);
+    }
+
+    /**
+     * IT checks session status (polling check_session_status every 2s)
+     */
+    public function vncSessionStatus(Request $request, Response $response, string $id): void
+    {
+        $session = $this->remoteModel->getVncSession((int)$id);
+        if (!$session) {
+            $response->json(['status' => 'not_found'], 404);
+            return;
+        }
+
+        // Build noVNC iframe URL
+        $wsUrl = $session['ws_url'];
+        $pass = urlencode($session['session_pass']);
+        $iframeUrl = "{$wsUrl}?scale=true&password={$pass}";
+
+        $response->json([
+            'status'       => $session['status'],
+            'ws_url'       => $session['ws_url'],
+            'session_pass' => $session['session_pass'],
+            'iframe_url'   => $iframeUrl,
+            'it_name'      => $session['it_name'],
+            'enduser_name' => $session['enduser_name']
+        ]);
+    }
+
+    /**
+     * End session (called by either IT or Enduser)
+     */
+    public function vncEnd(Request $request, Response $response): void
+    {
+        $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $body = $decoded;
+            }
+        }
+
+        $sessionId = (int)($body['session_id'] ?? 0);
+        if ($sessionId) {
+            $this->remoteModel->updateVncStatus($sessionId, 'ended');
+        }
+
+        $response->json(['success' => true]);
+    }
 }

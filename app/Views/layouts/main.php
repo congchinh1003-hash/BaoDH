@@ -930,7 +930,123 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(e => {});
     }, 10000);
+
+    // =========================================================================
+    // noVNC / TightVNC REALTIME REQUEST POLLER (REQUEST -> ACCEPT -> CONTROL)
+    // =========================================================================
+    let currentVncSessionId = null;
+    setInterval(function() {
+        fetch(baseUrl + '/remote-support/vnc/check-request')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.has_request && data.request) {
+                    const req = data.request;
+                    currentVncSessionId = req.id;
+                    const reqText = document.getElementById('novncRequesterText');
+                    const tickText = document.getElementById('novncTicketText');
+                    if (reqText) reqText.textContent = `IT [${req.it_name}] muốn điều khiển máy bạn`;
+                    if (tickText) tickText.textContent = `#${req.ticket_code || req.ticket_id}: ${req.ticket_title}`;
+                    const modalEl = document.getElementById('novncIncomingModal');
+                    if (modalEl && (!modalEl.classList.contains('show'))) {
+                        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                        modal.show();
+                    }
+                }
+            })
+            .catch(() => {});
+    }, 2500);
+
+    const btnAcceptNovnc = document.getElementById('btnAcceptNovnc');
+    const btnRejectNovnc = document.getElementById('btnRejectNovnc');
+    if (btnAcceptNovnc) {
+        btnAcceptNovnc.addEventListener('click', function() {
+            if (!currentVncSessionId) return;
+            fetch(baseUrl + '/remote-support/vnc/respond', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+                body: JSON.stringify({ session_id: currentVncSessionId, action: 'accept', _csrf_token: '<?= csrf_token() ?>' })
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
+                if (modal) modal.hide();
+                showVncActiveBar(currentVncSessionId);
+            });
+        });
+    }
+    if (btnRejectNovnc) {
+        btnRejectNovnc.addEventListener('click', function() {
+            if (!currentVncSessionId) return;
+            fetch(baseUrl + '/remote-support/vnc/respond', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+                body: JSON.stringify({ session_id: currentVncSessionId, action: 'reject', _csrf_token: '<?= csrf_token() ?>' })
+            }).then(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
+                if (modal) modal.hide();
+            });
+        });
+    }
+
+    function showVncActiveBar(sessId) {
+        if (document.getElementById('vncActiveFloatingBar')) return;
+        const bar = document.createElement('div');
+        bar.id = 'vncActiveFloatingBar';
+        bar.className = 'position-fixed bottom-0 start-50 translate-middle-x mb-3 px-4 py-2 bg-dark text-white rounded-pill shadow-lg border border-danger d-flex align-items-center gap-3 animate__animated animate__fadeInUp';
+        bar.style.zIndex = '1000000';
+        bar.innerHTML = `
+            <span class="spinner-grow spinner-grow-sm text-danger" role="status"></span>
+            <span class="small fw-bold">Màn hình đang được kết nối với IT qua noVNC</span>
+            <button type="button" class="btn btn-danger btn-sm rounded-pill fw-bold py-0 px-3" onclick="endVncSession(${sessId})">
+                <i class="bi bi-x-circle me-1"></i> Ngắt Kết Nối
+            </button>
+        `;
+        document.body.appendChild(bar);
+    }
+
+    window.endVncSession = function(sessId) {
+        fetch(baseUrl + '/remote-support/vnc/end', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+            body: JSON.stringify({ session_id: sessId, _csrf_token: '<?= csrf_token() ?>' })
+        }).then(() => {
+            const bar = document.getElementById('vncActiveFloatingBar');
+            if (bar) bar.remove();
+        });
+    };
 });
 </script>
+
+<!-- noVNC Incoming Request Modal for Enduser -->
+<div class="modal fade" id="novncIncomingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true" style="z-index: 1000000;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-display me-2"></i> Yêu Cầu Điều Khiển Từ Xa (noVNC)
+                </h5>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="p-3 bg-danger bg-opacity-10 rounded-circle d-inline-block text-danger mb-3">
+                    <i class="bi bi-person-workspace fs-1"></i>
+                </div>
+                <h5 class="fw-bold mb-2" id="novncRequesterText">Kỹ thuật viên IT đang yêu cầu điều khiển máy bạn</h5>
+                <p class="text-muted small mb-3">
+                    Sự cố: <strong id="novncTicketText" class="text-dark">#TICKET</strong><br>
+                    Kỹ thuật viên sẽ có thể thao tác chuột và bàn phím trên máy tính của bạn thông qua noVNC để kiểm tra và xử lý sự cố.
+                </p>
+                <div class="alert alert-warning py-2 px-3 small text-start">
+                    <i class="bi bi-shield-check me-1"></i> <strong>Lưu ý:</strong> Đảm bảo máy tính của bạn đã bật TightVNC Server (mặc định cổng 5900). Bạn có thể ngắt kết nối bất cứ lúc nào.
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary px-4 fw-bold" id="btnRejectNovnc">
+                    <i class="bi bi-x-circle me-1"></i> Từ Chối
+                </button>
+                <button type="button" class="btn btn-danger px-4 fw-bold shadow-sm" id="btnAcceptNovnc">
+                    <i class="bi bi-check-circle me-1"></i> Chấp Nhận Cho Điều Khiển
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>

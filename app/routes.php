@@ -291,3 +291,11 @@ $router->post('/remote-support/api/control/heartbeat/{code}', [RemoteSupportCont
 $router->get('/remote-support/api/control/status/{code}', [RemoteSupportController::class, 'apiControlStatus'], [AuthMiddleware::class]);
 $router->get('/remote-support/download-agent/{code}', [RemoteSupportController::class, 'downloadAgent']);
 
+// NOVNC + WEBSOCKIFY + TIGHTVNC INTEGRATION (REQUEST -> ACCEPT -> CONTROL)
+$router->post('/remote-support/vnc/request', [RemoteSupportController::class, 'vncRequest'], [AuthMiddleware::class]);
+$router->get('/remote-support/vnc/check-request', [RemoteSupportController::class, 'vncCheckRequest'], [AuthMiddleware::class]);
+$router->post('/remote-support/vnc/respond', [RemoteSupportController::class, 'vncRespond'], [AuthMiddleware::class]);
+$router->get('/remote-support/vnc/session-status/{id}', [RemoteSupportController::class, 'vncSessionStatus'], [AuthMiddleware::class]);
+$router->post('/remote-support/vnc/end', [RemoteSupportController::class, 'vncEnd'], [AuthMiddleware::class]);
+
+

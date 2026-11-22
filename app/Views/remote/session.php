@@ -41,6 +41,9 @@ $currentHost = ($isHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ??
 
         <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
             <?php if ($roleInSession === 'STAFF'): ?>
+                <button type="button" id="btnToggleVncDesktop" class="btn btn-outline-warning btn-sm fw-bold" title="Chuyển sang chế độ điều khiển noVNC (TightVNC 6080)">
+                    <i class="bi bi-display me-1"></i> Chế độ noVNC (TightVNC)
+                </button>
                 <button type="button" id="btnFullscreen" class="btn btn-outline-light btn-sm" title="Xem toàn màn hình">
                     <i class="bi bi-fullscreen me-1"></i> Toàn màn hình
                 </button>
@@ -202,6 +205,28 @@ $currentHost = ($isHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ??
                         <button type="button" id="btnTakeScreenshot" class="btn btn-sm btn-outline-info rounded-pill" title="Chụp ảnh màn hình lưu bằng chứng">
                             <i class="bi bi-camera me-1"></i> Chụp Màn Hình
                         </button>
+                    </div>
+
+                    <!-- noVNC Embedded Frame Container -->
+                    <div id="vncViewContainer" class="position-absolute top-0 start-0 w-100 h-100 d-none flex-column" style="background: #000; z-index: 30;">
+                        <div class="px-3 py-2 bg-dark border-bottom border-secondary d-flex justify-content-between align-items-center" style="font-size:0.8rem;">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-danger"><i class="bi bi-display me-1"></i> noVNC Desktop</span>
+                                <span class="text-white-50">Cầu nối Websockify: <code>http://127.0.0.1:6080</code> &rarr; TightVNC: <code>5900</code></span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="http://127.0.0.1:6080/vnc_lite.html?scale=true&password=123456" target="_blank" class="btn btn-outline-info btn-sm py-1 px-3" style="font-size:0.75rem;">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i> Mở Trong Tab Mới
+                                </a>
+                                <button type="button" class="btn btn-outline-light btn-sm py-1 px-3" onclick="var f=document.getElementById('novncMainIframe'); if(f) f.src=f.src;" style="font-size:0.75rem;">
+                                    <i class="bi bi-arrow-clockwise me-1"></i> Tải Lại Frame
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-3" onclick="document.getElementById('btnToggleVncDesktop').click();" style="font-size:0.75rem;">
+                                    <i class="bi bi-arrow-left me-1"></i> Về Live WebRTC
+                                </button>
+                            </div>
+                        </div>
+                        <iframe id="novncMainIframe" src="about:blank" class="w-100 flex-grow-1" style="height: calc(100% - 40px); min-height: 520px; border: none;"></iframe>
                     </div>
                 </div>
 
@@ -1144,6 +1169,32 @@ $currentHost = ($isHttps ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ??
         a.href = dataUrl;
         a.download = `Screenshot_${SESSION_CODE}_${Date.now()}.png`;
         a.click();
+    }
+
+    // STAFF: Toggle noVNC Desktop Mode
+    const btnToggleVncDesktop = document.getElementById('btnToggleVncDesktop');
+    const vncViewContainer = document.getElementById('vncViewContainer');
+    const novncMainIframe = document.getElementById('novncMainIframe');
+    let isVncModeActive = false;
+
+    if (btnToggleVncDesktop && vncViewContainer) {
+        btnToggleVncDesktop.addEventListener('click', function() {
+            isVncModeActive = !isVncModeActive;
+            if (isVncModeActive) {
+                this.className = 'btn btn-warning btn-sm fw-bold shadow';
+                this.innerHTML = '<i class="bi bi-display me-1"></i> Đang Ở noVNC (Bấm về WebRTC)';
+                vncViewContainer.classList.remove('d-none');
+                vncViewContainer.classList.add('d-flex');
+                if (novncMainIframe && (novncMainIframe.src === 'about:blank' || !novncMainIframe.src.includes('6080'))) {
+                    novncMainIframe.src = 'http://127.0.0.1:6080/vnc_lite.html?scale=true&password=123456';
+                }
+            } else {
+                this.className = 'btn btn-outline-warning btn-sm fw-bold';
+                this.innerHTML = '<i class="bi bi-display me-1"></i> Chế độ noVNC (TightVNC)';
+                vncViewContainer.classList.add('d-none');
+                vncViewContainer.classList.remove('d-flex');
+            }
+        });
     }
 
     // STAFF: Fullscreen
