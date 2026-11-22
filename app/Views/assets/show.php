@@ -363,6 +363,46 @@ $statusText = match($asset['status']) {
 
     <!-- CỘT PHẢI: THÔNG TIN PHỤ TRÁCH & NGƯỜI SỬ DỤNG -->
     <div class="col-12 col-xl-4">
+        <!-- QR CODE & STICKER TAG CARD -->
+        <?php
+            $host = $_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com';
+            if (strpos($host, 'baodh') !== false || strpos($host, 'onrender.com') !== false) {
+                $qrBaseDomain = 'https://baodh.onrender.com';
+            } else {
+                $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                           (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+                $protocol = $isHttps ? 'https' : 'http';
+                $qrBaseDomain = ($host === 'localhost' || $host === 'localhost:3000' || $host === '127.0.0.1:3000')
+                    ? 'https://baodh.onrender.com'
+                    : "$protocol://$host";
+            }
+            $assetScanUrl = $qrBaseDomain . '/asset/' . urlencode($asset['asset_code']);
+            $assetQrImg = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" . urlencode($assetScanUrl);
+        ?>
+        <div class="card mb-4 shadow-sm border-0 bg-white">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-dark"><i class="bi bi-qr-code-scan me-2 text-primary"></i>Mã QR Thiết Bị</span>
+                <a href="<?= $baseUrl ?>/assets/<?= $asset['id'] ?>/qr" class="btn btn-sm btn-outline-dark fw-semibold" target="_blank" title="Mở trang in tem nhãn">
+                    <i class="bi bi-printer me-1"></i>In Tem
+                </a>
+            </div>
+            <div class="card-body p-4 text-center">
+                <div class="p-2 bg-white border border-2 border-primary-subtle rounded-3 d-inline-block shadow-sm mb-2">
+                    <img src="<?= $assetQrImg ?>" alt="QR Code <?= htmlspecialchars($asset['asset_code']) ?>" style="width: 170px; height: 170px;" class="img-fluid">
+                </div>
+                <div class="font-monospace fw-bold text-primary fs-6 mb-1"><?= htmlspecialchars($asset['asset_code']) ?></div>
+                <p class="text-muted small mb-3">Dùng camera điện thoại quét để xem trực tiếp trang thiết bị trên <strong>baodh.onrender.com</strong></p>
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                    <a href="<?= $baseUrl ?>/assets/<?= $asset['id'] ?>/qr" class="btn btn-primary btn-sm fw-semibold shadow-sm">
+                        <i class="bi bi-printer-fill me-1"></i>In Tem Nhãn Dán
+                    </a>
+                    <a href="<?= $assetQrImg ?>" download="QR_<?= htmlspecialchars($asset['asset_code']) ?>.png" target="_blank" class="btn btn-outline-secondary btn-sm fw-semibold">
+                        <i class="bi bi-download me-1"></i>Tải Ảnh QR
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- CURRENT USER CARD -->
         <div class="card mb-4 shadow-sm border-0 bg-white">
             <div class="card-header bg-white py-3 border-bottom">

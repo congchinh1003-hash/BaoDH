@@ -1,6 +1,18 @@
 <?php
-$scanUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost:3000') . '/asset/' . urlencode($asset['asset_code']);
-$qrImageUrl = "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=" . urlencode($scanUrl);
+$host = $_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com';
+if (strpos($host, 'baodh') !== false || strpos($host, 'onrender.com') !== false) {
+    $baseUrlDomain = 'https://baodh.onrender.com';
+} else {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+               (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    $protocol = $isHttps ? 'https' : 'http';
+    $baseUrlDomain = ($host === 'localhost' || $host === 'localhost:3000' || $host === '127.0.0.1:3000')
+        ? 'https://baodh.onrender.com'
+        : "$protocol://$host";
+}
+
+$scanUrl = $baseUrlDomain . '/asset/' . urlencode($asset['asset_code']);
+$qrImageUrl = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" . urlencode($scanUrl);
 ?>
 
 <div class="d-print-none mb-4 d-flex justify-content-between align-items-center">
@@ -50,7 +62,8 @@ $qrImageUrl = "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=" .
                         <div class="p-1 bg-white border rounded shadow-sm d-inline-block">
                             <img src="<?= $qrImageUrl ?>" alt="QR Code <?= htmlspecialchars($asset['asset_code']) ?>" style="width: 130px; height: 130px;" class="img-fluid">
                         </div>
-                        <div class="text-muted font-monospace mt-1" style="font-size: 10px;">Quét tra cứu nhanh</div>
+                        <div class="text-muted font-monospace mt-1" style="font-size: 9.5px;">Quét mở trên điện thoại</div>
+                        <div class="text-primary font-monospace fw-bold" style="font-size: 8.5px; word-break: break-all;">baodh.onrender.com</div>
                     </div>
                     <div class="col-7 ps-2">
                         <div class="mb-1">

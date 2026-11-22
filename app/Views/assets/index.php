@@ -255,7 +255,11 @@ if (php_sapi_name() !== 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') ===
                                     <span class="small" style="color:#5E6C84;">--</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="pe-4 text-end">
+                            <td class="pe-4 text-end text-nowrap">
+                                <a href="<?= $baseUrl ?>/assets/<?= $a['id'] ?>/qr" class="btn btn-sm btn-outline-dark fw-semibold me-1"
+                                   style="border-radius:6px;font-size:.78rem;padding:.25rem .6rem;" title="Xem & In Tem QR Code">
+                                    <i class="bi bi-qr-code me-1"></i>In QR
+                                </a>
                                 <a href="<?= $baseUrl ?>/assets/<?= $a['id'] ?>" class="btn btn-sm fw-semibold"
                                    style="border:1.5px solid #0052CC;color:#0052CC;border-radius:6px;font-size:.78rem;padding:.25rem .75rem;">
                                     Chi tiết <i class="bi bi-chevron-right ms-1"></i>

@@ -14,6 +14,10 @@ abstract class RoleMiddleware
     public function handle(Request $request, Response $response): void
     {
         if (!Auth::check()) {
+            $currentUri = $_SERVER['REQUEST_URI'] ?? '';
+            if (!empty($currentUri) && $currentUri !== '/login' && $currentUri !== '/logout') {
+                Session::set('return_url', $currentUri);
+            }
             Session::setFlash('warning', 'Vui lòng đăng nhập để tiếp tục.');
             $response->redirect('/login');
         }
@@ -24,4 +28,3 @@ abstract class RoleMiddleware
         }
     }
 }
-
