@@ -21,7 +21,7 @@ class Project extends Model
             LEFT JOIN users u ON p.lead_id = u.id
             LEFT JOIN project_issues pi ON p.id = pi.project_id
             WHERE p.status = :status
-            GROUP BY p.id
+            GROUP BY p.id, u.full_name, u.username, u.avatar
             ORDER BY p.updated_at DESC
         ";
         $stmt = $this->db->prepare($sql);
@@ -64,7 +64,7 @@ class Project extends Model
                   p.lead_id = :uid 
                   OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id = p.id AND pm.user_id = :uid)
               )
-            GROUP BY p.id
+            GROUP BY p.id, u.full_name, u.username, u.avatar
             ORDER BY p.updated_at DESC
         ";
         $stmt = $this->db->prepare($sql);

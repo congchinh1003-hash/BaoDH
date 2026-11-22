@@ -17,6 +17,9 @@ class Database
             
             try {
                 self::$instance = new PDO($dsn, $config['username'], $config['password'], $config['options']);
+                
+                // Disable ONLY_FULL_GROUP_BY for MySQL 8 & TiDB Cloud compatibility
+                self::$instance->exec("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
             } catch (PDOException $e) {
                 error_log("Database connection error: " . $e->getMessage());
                 $detail = (getenv('APP_DEBUG') === 'true' || getenv('RENDER')) 
