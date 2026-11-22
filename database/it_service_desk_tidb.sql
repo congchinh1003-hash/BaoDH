@@ -1705,3 +1705,36 @@ ALTER TABLE `tickets` ADD CONSTRAINT `fk_tk_service` FOREIGN KEY (`service_id`) 
 ALTER TABLE `tickets` ADD CONSTRAINT `fk_tk_sla` FOREIGN KEY (`sla_id`) REFERENCES `sla_configs` (`id`) ON DELETE SET NULL;
 ALTER TABLE `user_roles` ADD CONSTRAINT `fk_ur_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
 ALTER TABLE `user_roles` ADD CONSTRAINT `fk_ur_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+
+-- ==========================================================
+-- REMOTE DESKTOP SUPPORT & ASSISTANCE TABLES
+-- ==========================================================
+
+CREATE TABLE IF NOT EXISTS `remote_support_sessions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `session_code` VARCHAR(20) NOT NULL UNIQUE,
+  `ticket_id` INT NULL,
+  `staff_id` INT NOT NULL,
+  `client_id` INT NOT NULL,
+  `status` VARCHAR(30) NOT NULL DEFAULT 'WAITING',
+  `notes` TEXT NULL,
+  `ultraviewer_id` VARCHAR(50) NULL,
+  `ultraviewer_pass` VARCHAR(50) NULL,
+  `started_at` DATETIME NULL,
+  `ended_at` DATETIME NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_code` (`session_code`),
+  INDEX `idx_ticket` (`ticket_id`),
+  INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `remote_support_signals` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `session_id` INT NOT NULL,
+  `sender_type` VARCHAR(20) NOT NULL,
+  `signal_type` VARCHAR(30) NOT NULL,
+  `payload` LONGTEXT NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_session_sig` (`session_id`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

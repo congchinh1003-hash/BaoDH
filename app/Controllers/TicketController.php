@@ -282,10 +282,12 @@ class TicketController extends Controller
         $totalWorklogFormatted = Ticket::formatMinutesToTime($totalWorklogMinutes);
         $checklist = $this->ticketModel->getChecklist($ticketId);
         $linkedIssues = $this->ticketModel->getLinkedIssues($ticketId);
+        $activeRemoteSession = (new \App\Models\RemoteSession())->findActiveForTicket($ticketId);
 
         return $this->render('tickets/show', [
             'pageTitle'              => "Ticket {$ticket['ticket_code']} - {$ticket['title']}",
             'ticket'                 => $ticket,
+            'activeRemoteSession'    => $activeRemoteSession,
             'comments'               => $comments,
             'history'                => $history,
             'attachments'            => $attachments,

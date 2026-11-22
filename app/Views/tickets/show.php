@@ -45,6 +45,29 @@ $canManageTicket = $isStaffOrManager || Auth::isAdmin();
     </ol>
 </nav>
 
+<!-- ACTIVE REMOTE SUPPORT BANNER -->
+<?php if (!empty($activeRemoteSession)): ?>
+    <div class="alert alert-primary border-2 border-primary shadow-sm p-3 mb-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3 animate__animated animate__fadeIn">
+        <div class="d-flex align-items-center gap-3">
+            <div class="spinner-grow text-primary" role="status" style="width: 2rem; height: 2rem;"></div>
+            <div>
+                <h6 class="fw-bold text-primary mb-1">
+                    <i class="bi bi-display me-2"></i>
+                    <?= $isRequester ? 'Kỹ thuật viên IT đang yêu cầu kết nối Remote máy tính của bạn!' : 'Phiên Hỗ Trợ Từ Xa Đang Hoạt Động Cho Ticket Này' ?>
+                </h6>
+                <p class="mb-0 text-muted small">
+                    Mã phiên: <strong class="text-dark font-monospace"><?= htmlspecialchars($activeRemoteSession['session_code']) ?></strong> | 
+                    Kỹ thuật viên: <strong class="text-dark"><?= htmlspecialchars($activeRemoteSession['staff_name']) ?></strong> | 
+                    Trạng thái: <span class="badge bg-success"><?= htmlspecialchars($activeRemoteSession['status']) ?></span>
+                </p>
+            </div>
+        </div>
+        <a href="<?= $baseUrl ?>/remote-support/session/<?= $activeRemoteSession['session_code'] ?>" class="btn btn-primary fw-bold shadow-sm px-4">
+            <i class="bi bi-broadcast me-1"></i> <?= $isRequester ? 'Tham Gia & Cấp Quyền Ngay' : 'Vào Phòng Điều Khiển' ?>
+        </a>
+    </div>
+<?php endif; ?>
+
 <!-- TICKET HERO HEADER -->
 <div class="mb-4 bg-white rounded-3 shadow-sm p-4"
      style="border-left:4px solid #0052CC; border-radius:10px !important;">
@@ -1027,6 +1050,37 @@ $canManageTicket = $isStaffOrManager || Auth::isAdmin();
                             </button>
                         <?php endif; ?>
                     </div>
+
+                    <!-- REMOTE ASSISTANCE BUTTON FOR IT -->
+                    <?php if (Auth::isStaff() || Auth::isManager() || Auth::isAdmin()): ?>
+                        <div class="mb-3">
+                            <?php if (!empty($activeRemoteSession)): ?>
+                                <a href="<?= $baseUrl ?>/remote-support/session/<?= $activeRemoteSession['session_code'] ?>" class="btn btn-warning w-100 p-2 text-start rounded-3 d-flex align-items-center justify-content-between shadow-xs border-warning">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="spinner-grow spinner-grow-sm text-dark"></span>
+                                        <div>
+                                            <div class="fw-bold text-dark" style="font-size:0.8rem;">Phiên Remote Đang Mở</div>
+                                            <div class="text-muted" style="font-size:0.68rem;">Mã: <?= $activeRemoteSession['session_code'] ?> (Bấm vào xem)</div>
+                                        </div>
+                                    </div>
+                                    <i class="bi bi-box-arrow-in-right text-dark"></i>
+                                </a>
+                            <?php else: ?>
+                                <a href="<?= $baseUrl ?>/remote-support/request/<?= $ticket['id'] ?>" class="btn btn-outline-primary w-100 p-2 text-start rounded-3 d-flex align-items-center justify-content-between action-tile border-primary-subtle" style="background:#F0F7FF;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="p-2 bg-primary text-white rounded-2">
+                                            <i class="bi bi-display fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-primary" style="font-size:0.8rem;">Yêu cầu Remote Máy Tính</div>
+                                            <div class="text-muted" style="font-size:0.68rem;">Xem &amp; Hỗ trợ màn hình User trực tiếp</div>
+                                        </div>
+                                    </div>
+                                    <i class="bi bi-arrow-right text-primary"></i>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
 
                     <!-- PHẦN 2: ĐIỀU PHỐI & PHỤ TRÁCH (2 CỘT GỌN GÀNG) -->
                     <div class="mb-3">

@@ -17,6 +17,7 @@ use App\Controllers\ProjectController;
 use App\Controllers\ProfileController;
 use App\Controllers\BackupController;
 use App\Controllers\AttachmentController;
+use App\Controllers\RemoteSupportController;
 use App\Core\Auth;
 use App\Core\Router;
 use App\Middleware\AdminMiddleware;
@@ -270,4 +271,16 @@ $router->post('/projects/api/move-sprint', [ProjectController::class, 'ajaxMoveS
 $router->post('/projects/api/quick-create', [ProjectController::class, 'ajaxQuickCreate'], [AuthMiddleware::class]);
 $router->post('/projects/api/add-comment', [ProjectController::class, 'ajaxAddComment'], [AuthMiddleware::class]);
 $router->get('/projects/api/eligible-parents', [ProjectController::class, 'ajaxGetEligibleParents'], [AuthMiddleware::class]);
+
+// REMOTE SUPPORT ASSISTANCE (WEBRTC LIVE DESKTOP)
+$router->get('/remote-support', [RemoteSupportController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/remote-support/join', [RemoteSupportController::class, 'joinByPin'], [AuthMiddleware::class]);
+$router->get('/remote-support/request/{ticketId}', [RemoteSupportController::class, 'requestFromTicket'], [AuthMiddleware::class]);
+$router->post('/remote-support/create-quick', [RemoteSupportController::class, 'createQuick'], [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->get('/remote-support/session/{code}', [RemoteSupportController::class, 'session'], [AuthMiddleware::class]);
+$router->post('/remote-support/api/signal', [RemoteSupportController::class, 'apiSignalPost'], [AuthMiddleware::class]);
+$router->get('/remote-support/api/signal/{code}', [RemoteSupportController::class, 'apiSignalGet'], [AuthMiddleware::class]);
+$router->post('/remote-support/api/status/{code}', [RemoteSupportController::class, 'apiUpdateStatus'], [AuthMiddleware::class]);
+$router->post('/remote-support/api/ultraviewer/{code}', [RemoteSupportController::class, 'apiSaveUltraviewer'], [AuthMiddleware::class]);
+$router->get('/remote-support/api/check-pending', [RemoteSupportController::class, 'apiCheckPending'], [AuthMiddleware::class]);
 

@@ -195,6 +195,8 @@ if (isset($project) && !empty($project['id'])) {
                         <?php if (Auth::can('menu.jumpserver')): ?>
                             <li><a class="dropdown-item small py-2" href="<?= $baseUrl ?>/jump"><i class="bi bi-terminal-fill me-2 text-dark"></i> JumpServer Bastion PAM</a></li>
                         <?php endif; ?>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item small py-2" href="<?= $baseUrl ?>/remote-support"><i class="bi bi-display me-2 text-primary"></i> Hỗ Trợ Từ Xa (Remote Live)</a></li>
                     </ul>
                 </div>
 
@@ -412,6 +414,9 @@ if (isset($project) && !empty($project['id'])) {
                             <i class="bi bi-terminal-fill text-dark"></i> JumpServer PAM
                         </a>
                     <?php endif; ?>
+                    <a href="<?= $baseUrl ?>/remote-support" class="nav-link <?= str_contains($currentPath, '/remote-support') ? 'active' : '' ?>">
+                        <i class="bi bi-display text-primary"></i> Remote Hỗ Trợ
+                    </a>
 
                     <?php if (Auth::can('menu.admin')): ?>
                         <div class="nav-section-title mt-2">HỆ THỐNG</div>
@@ -882,6 +887,45 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (badge) badge.remove();
                         if (headerAction) headerAction.style.display = 'none';
                     }
+                }
+            })
+            .catch(e => {});
+
+        // Check for pending remote assistance invitations
+        fetch(baseUrl + '/remote-support/api/check-pending')
+            .then(res => res.json())
+            .then(res => {
+                if (res && res.pending) {
+                    var sess = res.pending;
+                    if (!document.getElementById('remoteRequestFloatingAlert')) {
+                        var box = document.createElement('div');
+                        box.id = 'remoteRequestFloatingAlert';
+                        box.className = 'position-fixed bottom-0 end-0 m-3 p-3 bg-white border border-primary border-3 rounded-4 shadow-lg animate__animated animate__bounceInUp';
+                        box.style.zIndex = '999999';
+                        box.style.maxWidth = '360px';
+                        box.innerHTML = `
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="p-2 bg-primary text-white rounded-circle shadow-sm">
+                                    <i class="bi bi-display fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-danger">YÊU CẦU REMOTE</span>
+                                        <button type="button" class="btn-close btn-sm" onclick="this.closest('#remoteRequestFloatingAlert').remove()"></button>
+                                    </div>
+                                    <div class="fw-bold text-dark small mb-1">Kỹ thuật viên <strong>${sess.staff_name}</strong> đang yêu cầu kết nối remote máy tính của bạn!</div>
+                                    <div class="text-muted small mb-2" style="font-size:0.75rem;">Mã phiên: <strong class="text-primary">${sess.session_code}</strong></div>
+                                    <a href="${baseUrl}/remote-support/session/${sess.session_code}" class="btn btn-primary btn-sm w-100 fw-bold shadow-xs">
+                                        <i class="bi bi-broadcast me-1"></i> Tham gia & Cấp quyền ngay
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(box);
+                    }
+                } else {
+                    var el = document.getElementById('remoteRequestFloatingAlert');
+                    if (el) el.remove();
                 }
             })
             .catch(e => {});
