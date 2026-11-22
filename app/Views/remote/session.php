@@ -715,6 +715,11 @@ $user = Auth::user();
     async function pollSignals() {
         try {
             const res = await fetch(`${BASE_URL}/remote-support/api/signal/${SESSION_CODE}?for_type=${ROLE}&after_id=${lastSignalId}`);
+            if (res.status === 401) {
+                console.warn('[Remote] Phiên làm việc hết hạn.');
+                clearInterval(pollInterval);
+                return;
+            }
             const data = await res.json();
             if (data.success) {
                 if (data.session_status === 'ENDED') {

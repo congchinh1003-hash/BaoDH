@@ -11,10 +11,20 @@ class Response
 
     public function redirect(string $url): void
     {
-        // Support base sub-paths
-        $baseUrl = self::baseUrl();
+        // Support base sub-paths without duplicating baseUrl
         if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
-            $url = $baseUrl . '/' . ltrim($url, '/');
+            $baseUrl = self::baseUrl();
+            if (!empty($baseUrl)) {
+                if (str_starts_with($url, $baseUrl . '/')) {
+                    // Already contains baseUrl prefix
+                } elseif ($url === $baseUrl) {
+                    // Exact match
+                } else {
+                    $url = $baseUrl . '/' . ltrim($url, '/');
+                }
+            } else {
+                $url = '/' . ltrim($url, '/');
+            }
         }
         header("Location: {$url}");
         exit;

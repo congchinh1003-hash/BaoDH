@@ -15,12 +15,13 @@ class AuthController extends Controller
     {
         if (Auth::check()) {
             $returnUrl = Session::get('return_url');
-            if ($returnUrl && is_string($returnUrl) && str_starts_with($returnUrl, '/')) {
-                Session::remove('return_url');
+            Session::remove('return_url');
+            if ($returnUrl && is_string($returnUrl) && str_starts_with($returnUrl, '/asset/')) {
                 $response->redirect($returnUrl);
                 return '';
             }
             $this->redirectBasedOnRole($response);
+            return '';
         }
 
         $db = \App\Core\Database::getConnection();
@@ -72,14 +73,15 @@ class AuthController extends Controller
         Auth::login($user, $roles);
         $this->setFlash('success', "Chào mừng " . htmlspecialchars($user['full_name']) . " đã đăng nhập thành công.");
 
-        // Check if there is a pending return URL (e.g. from QR code scan on mobile)
+        // Check if there is a pending return URL ONLY from an Asset QR code scan (/asset/{code})
         $returnUrl = Session::get('return_url');
-        if ($returnUrl && is_string($returnUrl) && str_starts_with($returnUrl, '/')) {
-            Session::remove('return_url');
+        Session::remove('return_url');
+        if ($returnUrl && is_string($returnUrl) && str_starts_with($returnUrl, '/asset/')) {
             $response->redirect($returnUrl);
             return;
         }
 
+        // Normal login: ALWAYS redirect to homepage / dashboard
         $this->redirectBasedOnRole($response);
     }
 

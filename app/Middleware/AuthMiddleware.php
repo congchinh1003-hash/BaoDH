@@ -12,10 +12,19 @@ class AuthMiddleware
     public function handle(Request $request, Response $response): void
     {
         if (!Auth::check()) {
-            $currentUri = $_SERVER['REQUEST_URI'] ?? '';
-            if (!empty($currentUri) && $currentUri !== '/login' && $currentUri !== '/logout') {
-                Session::set('return_url', $currentUri);
+            if ($request->isAjax()) {
+                $response->json(['success' => false, 'message' => 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.'], 401);
+                return;
             }
+
+            // ONLY store return_url if user is accessing an asset via QR code scan (/asset/{code})
+            $path = $request->getPath();
+            if (str_starts_with($path, '/asset/')) {
+                Session::set('return_url', $path);
+            } else {
+                Session::remove('return_url');
+            }
+
             Session::setFlash('warning', 'Vui lòng đăng nhập để tiếp tục xem thông tin.');
             $response->redirect('/login');
         }
