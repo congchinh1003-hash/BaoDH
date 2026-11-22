@@ -82,7 +82,7 @@ $user = Auth::user();
                             <div class="mb-3 d-flex justify-content-center">
                                 <video id="clientLocalPreview" autoplay playsinline muted class="rounded-3 border border-success shadow-sm" style="max-width: 360px; max-height: 200px; width: 100%; object-fit: contain; background: #000;"></video>
                             </div>
-                            <div class="d-flex justify-content-center gap-3">
+                            <div class="d-flex justify-content-center gap-3 mb-3">
                                 <button type="button" id="btnStopShare" class="btn btn-outline-danger fw-bold px-4">
                                     <i class="bi bi-pause-circle me-1"></i> Tạm dừng chia sẻ
                                 </button>
@@ -90,12 +90,29 @@ $user = Auth::user();
                                     <i class="bi bi-x-circle me-1"></i> Ngắt kết nối ngay
                                 </button>
                             </div>
+
+                            <!-- DIRECT REMOTE CONTROL AGENT FOR CLIENT -->
+                            <div class="p-3 bg-dark bg-opacity-50 rounded-3 border border-secondary text-start mt-2">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="fw-bold small text-warning"><i class="bi bi-controller me-1"></i> Cho phép IT điều khiển chuột & phím:</span>
+                                    <span id="agentClientBadge" class="badge bg-secondary font-monospace"><i class="bi bi-circle me-1"></i> Chưa mở Agent</span>
+                                </div>
+                                <p class="text-light text-opacity-75 small mb-2" style="font-size:0.75rem;">Nếu Kỹ thuật viên cần thao tác trực tiếp, hãy tải file Agent bên dưới và nhấn đúp để mở (không cần cài đặt):</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="/remote-support/download-agent/<?= htmlspecialchars($session['session_code']) ?>" class="btn btn-success btn-sm fw-bold">
+                                        <i class="bi bi-download me-1"></i> Tải Agent Điều Khiển (TaskFlow-Agent.bat)
+                                    </a>
+                                    <button type="button" class="btn btn-outline-light btn-sm" onclick="navigator.clipboard.writeText('powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $s=\'<?= htmlspecialchars($session['session_code']) ?>\'; iex (irm \'https://baodh.onrender.com/public/agent/TaskFlow-Agent.ps1\')&quot;'); alert('Đã copy lệnh PowerShell! Bạn có thể dán vào PowerShell và Enter để chạy.');">
+                                        <i class="bi bi-terminal me-1"></i> Copy Lệnh PowerShell
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 <?php endif; ?>
 
                 <!-- CONTAINER VIDEO STREAMING CHO KỸ THUẬT VIÊN (STAFF) HOẶC PREVIEW -->
-                <div id="videoContainer" class="w-100 h-100 d-flex align-items-center justify-content-center position-relative <?= ($roleInSession === 'CLIENT') ? 'd-none' : '' ?>" style="background: #0d1117; min-height: 560px;">
+                <div id="videoContainer" class="w-100 h-100 d-flex align-items-center justify-content-center position-relative <?= ($roleInSession === 'CLIENT') ? 'd-none' : '' ?>" style="background: #0d1117; min-height: 560px; outline: none;" tabindex="0">
                     <!-- Loading placeholder for staff -->
                     <div id="staffWaitingBox" class="text-center p-4">
                         <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
@@ -103,6 +120,32 @@ $user = Auth::user();
                         <p class="text-muted small mb-0">Hệ thống đã gửi thông báo đến màn hình của <strong><?= htmlspecialchars($session['client_name']) ?></strong>.</p>
                         <div class="mt-3">
                             <span class="badge bg-secondary font-monospace p-2">MÃ KẾT NỐI: <?= htmlspecialchars($session['session_code']) ?></span>
+                        </div>
+                    </div>
+
+                    <!-- Top Control Status Banner for Staff -->
+                    <div id="staffControlStatusBanner" class="position-absolute top-0 start-50 translate-middle-x mt-2 px-3 py-1 bg-dark bg-opacity-90 rounded-pill border border-success d-none align-items-center gap-2 shadow" style="z-index: 25; font-size: 0.8rem;">
+                        <span class="spinner-grow spinner-grow-sm text-success" role="status"></span>
+                        <span class="text-white fw-bold">Agent Điều Khiển: <span id="staffAgentRes" class="text-info font-monospace">1920x1080</span></span>
+                        <span class="badge bg-success">ĐÃ KẾT NỐI</span>
+                    </div>
+
+                    <!-- Quick Hotkeys Bar for Staff -->
+                    <div id="staffQuickKeysBar" class="position-absolute top-0 end-0 m-2 p-2 bg-dark bg-opacity-90 rounded-3 border border-secondary d-none flex-column gap-1 shadow" style="z-index: 25; width: 175px; font-size: 0.75rem;">
+                        <div class="text-warning fw-bold text-uppercase d-flex justify-content-between align-items-center mb-1" style="font-size:0.65rem;">
+                            <span><i class="bi bi-keyboard me-1"></i> Phím Tắt</span>
+                            <span class="badge bg-info" id="ctrlStatusBadge">CTRL: BẬT</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="win"><i class="bi bi-windows text-primary me-1"></i> Start (Win)</button>
+                        <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="run"><i class="bi bi-play-circle text-success me-1"></i> Run (Win+R)</button>
+                        <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="taskmgr"><i class="bi bi-speedometer2 text-danger me-1"></i> Task Manager</button>
+                        <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="explorer"><i class="bi bi-folder2-open text-warning me-1"></i> Explorer (Win+E)</button>
+                        <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="cmd"><i class="bi bi-terminal-fill text-info me-1"></i> Mở CMD</button>
+                        <button type="button" class="btn btn-sm btn-outline-light py-1 text-start quick-hotkey" data-hk="alt_f4"><i class="bi bi-x-circle text-danger me-1"></i> Đóng Cửa Sổ</button>
+                        
+                        <div class="mt-1 border-top border-secondary pt-1">
+                            <input type="text" id="directTypeInput" class="form-control form-control-sm bg-dark text-white border-secondary mb-1" placeholder="Nhập chữ cần gõ..." style="font-size:0.75rem;">
+                            <button type="button" id="btnDirectType" class="btn btn-primary btn-sm w-100 py-1" style="font-size:0.75rem;"><i class="bi bi-send me-1"></i> Gõ Sang Máy</button>
                         </div>
                     </div>
 
@@ -116,10 +159,13 @@ $user = Auth::user();
                     <canvas id="pointerOverlay" class="position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none; z-index: 10;"></canvas>
 
                     <!-- Staff Toolbar Overlay when streaming -->
-                    <div id="videoToolbar" class="position-absolute bottom-0 start-50 translate-middle-x mb-3 px-3 py-2 bg-dark bg-opacity-75 rounded-pill border border-secondary d-none align-items-center gap-2" style="z-index: 20;">
-                        <span class="badge bg-success me-2"><i class="bi bi-record-fill me-1 text-danger"></i> LIVE</span>
+                    <div id="videoToolbar" class="position-absolute bottom-0 start-50 translate-middle-x mb-3 px-3 py-2 bg-dark bg-opacity-85 rounded-pill border border-secondary d-none align-items-center gap-2 shadow" style="z-index: 20;">
+                        <span class="badge bg-success me-1"><i class="bi bi-record-fill me-1 text-danger"></i> LIVE</span>
+                        <button type="button" id="btnToggleControl" class="btn btn-sm btn-outline-success rounded-pill fw-bold" title="Bật/Tắt chế độ điều khiển chuột và bàn phím máy tính">
+                            <i class="bi bi-controller me-1"></i> Bật Điều Khiển (Remote Control)
+                        </button>
                         <button type="button" id="btnToggleLaser" class="btn btn-sm btn-outline-warning rounded-pill active" title="Bật/Tắt chế độ chỉ điểm Laser (Click vào video để chỉ điểm)">
-                            <i class="bi bi-cursor-fill me-1"></i> Bút Chỉ Điểm (Laser)
+                            <i class="bi bi-cursor-fill me-1"></i> Bút Laser
                         </button>
                         <button type="button" id="btnTakeScreenshot" class="btn btn-sm btn-outline-info rounded-pill" title="Chụp ảnh màn hình lưu bằng chứng">
                             <i class="bi bi-camera me-1"></i> Chụp Màn Hình
@@ -209,11 +255,22 @@ $user = Auth::user();
                         </div>
                     </div>
 
-                    <!-- TAB 3: ULTRAVIEWER / ANYDESK DỰ PHÒNG -->
+                    <!-- TAB 3: ĐIỀU KHIỂN NỘI BỘ & ULTRAVIEWER -->
                     <div class="tab-pane fade p-3" id="tabUV" role="tabpanel">
+                        <div class="p-3 bg-light rounded-3 mb-3 border">
+                            <h6 class="fw-bold text-success mb-1"><i class="bi bi-controller me-1"></i> Agent Điều Khiển Nội Bộ:</h6>
+                            <p class="text-muted small mb-2">Để IT có thể điều khiển trực tiếp chuột & bàn phím như Remote Desktop, máy khách chỉ cần chạy file Agent:</p>
+                            <a href="/remote-support/download-agent/<?= htmlspecialchars($session['session_code']) ?>" class="btn btn-outline-success btn-sm fw-bold w-100 mb-2">
+                                <i class="bi bi-download me-1"></i> Tải TaskFlow-Agent.bat
+                            </a>
+                            <div class="small text-muted font-monospace bg-white p-1 rounded border text-break" style="font-size:0.68rem;">
+                                irm https://baodh.onrender.com/public/agent/TaskFlow-Agent.ps1 | iex
+                            </div>
+                        </div>
+
                         <div class="p-3 bg-light rounded-3 mb-3">
-                            <h6 class="fw-bold text-dark mb-1"><i class="bi bi-info-circle text-primary me-1"></i> Phương án dự phòng:</h6>
-                            <p class="text-muted small mb-0">Nếu không thể chia sẻ màn hình qua trình duyệt, người dùng có thể gửi ID/Pass UltraViewer hoặc AnyDesk tại đây để IT điều khiển.</p>
+                            <h6 class="fw-bold text-dark mb-1"><i class="bi bi-info-circle text-primary me-1"></i> Phương án dự phòng UltraViewer:</h6>
+                            <p class="text-muted small mb-0">Nếu không thể chia sẻ màn hình qua trình duyệt, người dùng có thể gửi ID/Pass UltraViewer hoặc AnyDesk tại đây.</p>
                         </div>
 
                         <?php if ($roleInSession === 'CLIENT'): ?>
@@ -561,11 +618,167 @@ $user = Auth::user();
         }, 25);
     }
 
-    // STAFF: Laser pointer interaction on clicking videoContainer
+    // STAFF: Remote Control & Laser Pointer Handling
+    let isControlEnabled = false;
+    let lastMouseMoveTime = 0;
+    const btnToggleControl = document.getElementById('btnToggleControl');
+    const staffControlStatusBanner = document.getElementById('staffControlStatusBanner');
+    const staffQuickKeysBar = document.getElementById('staffQuickKeysBar');
+
+    async function sendControlEvent(type, payload) {
+        try {
+            await fetch(BASE_URL + '/remote-support/api/control/event', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    session_code: SESSION_CODE,
+                    event_type: type,
+                    payload: payload,
+                    _csrf_token: CSRF_TOKEN
+                })
+            });
+        } catch (e) {
+            console.error('[RemoteControl] sendControlEvent error:', e);
+        }
+    }
+
+    if (btnToggleControl) {
+        btnToggleControl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            isControlEnabled = !isControlEnabled;
+            if (isControlEnabled) {
+                this.className = 'btn btn-sm btn-success rounded-pill fw-bold shadow';
+                this.innerHTML = '<i class="bi bi-controller me-1"></i> Đang Điều Khiển (ON)';
+                if (staffQuickKeysBar) {
+                    staffQuickKeysBar.classList.remove('d-none');
+                    staffQuickKeysBar.classList.add('d-flex');
+                }
+                if (videoContainer) {
+                    videoContainer.style.border = '2px solid #00d2ff';
+                    videoContainer.style.boxShadow = '0 0 20px rgba(0, 210, 255, 0.4)';
+                    videoContainer.style.cursor = 'default';
+                    videoContainer.focus();
+                }
+                isLaserEnabled = false;
+                if (btnToggleLaser) {
+                    btnToggleLaser.classList.remove('active', 'btn-warning');
+                    btnToggleLaser.classList.add('btn-outline-warning');
+                }
+            } else {
+                this.className = 'btn btn-sm btn-outline-success rounded-pill fw-bold';
+                this.innerHTML = '<i class="bi bi-controller me-1"></i> Bật Điều Khiển (Remote Control)';
+                if (staffQuickKeysBar) {
+                    staffQuickKeysBar.classList.add('d-none');
+                    staffQuickKeysBar.classList.remove('d-flex');
+                }
+                if (videoContainer) {
+                    videoContainer.style.border = 'none';
+                    videoContainer.style.boxShadow = 'none';
+                    videoContainer.style.cursor = 'crosshair';
+                }
+            }
+        });
+    }
+
+    // Quick Hotkey handlers
+    document.querySelectorAll('.quick-hotkey').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const hk = this.getAttribute('data-hk');
+            sendControlEvent('HOTKEY', { hotkey: hk });
+            this.classList.add('btn-light', 'text-dark');
+            setTimeout(() => this.classList.remove('btn-light', 'text-dark'), 200);
+        });
+    });
+
+    // Direct text typing handler
+    const btnDirectType = document.getElementById('btnDirectType');
+    const directTypeInput = document.getElementById('directTypeInput');
+    if (btnDirectType && directTypeInput) {
+        btnDirectType.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const txt = directTypeInput.value.trim();
+            if (!txt) return;
+            sendControlEvent('TEXT_INPUT', { text: txt });
+            directTypeInput.value = '';
+            alert('Đã gửi văn bản sang máy khách!');
+        });
+    }
+
+    // MOUSE & KEYBOARD EVENTS ON REMOTE SCREEN
     if (videoContainer && ROLE === 'STAFF') {
-        videoContainer.addEventListener('click', function(e) {
-            if (!isLaserEnabled) return;
-            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox')) return;
+        // Prevent right click context menu in control mode
+        videoContainer.addEventListener('contextmenu', function(e) {
+            if (isControlEnabled) {
+                e.preventDefault();
+                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
+                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
+                    ? targetElem.getBoundingClientRect() 
+                    : videoContainer.getBoundingClientRect();
+
+                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+                sendControlEvent('MOUSE_CLICK', { x: x, y: y, button: 'right' });
+            }
+        });
+
+        // Mouse Down (Left click)
+        videoContainer.addEventListener('mousedown', function(e) {
+            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
+            if (isControlEnabled) {
+                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
+                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
+                    ? targetElem.getBoundingClientRect() 
+                    : videoContainer.getBoundingClientRect();
+
+                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+                if (e.button === 0) {
+                    sendControlEvent('MOUSE_CLICK', { x: x, y: y, button: 'left' });
+                }
+            } else if (isLaserEnabled) {
+                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
+                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
+                    ? targetElem.getBoundingClientRect() 
+                    : videoContainer.getBoundingClientRect();
+
+                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+                drawStaffLaser(x, y);
+                sendSignal('POINTER', { x: x, y: y });
+            }
+        });
+
+        // Double click
+        videoContainer.addEventListener('dblclick', function(e) {
+            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
+            if (isControlEnabled) {
+                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
+                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
+                    ? targetElem.getBoundingClientRect() 
+                    : videoContainer.getBoundingClientRect();
+
+                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+                sendControlEvent('MOUSE_CLICK', { x: x, y: y, button: 'left', double: true });
+            }
+        });
+
+        // Mouse Move (throttled to 60ms)
+        videoContainer.addEventListener('mousemove', function(e) {
+            if (!isControlEnabled) return;
+            if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
+
+            const now = Date.now();
+            if (now - lastMouseMoveTime < 60) return;
+            lastMouseMoveTime = now;
 
             const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
             const rect = (targetElem && !targetElem.classList.contains('d-none')) 
@@ -575,10 +788,61 @@ $user = Auth::user();
             const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
-            drawStaffLaser(x, y);
-            sendSignal('POINTER', { x: x, y: y });
+            sendControlEvent('MOUSE_MOVE', { x: x, y: y });
+        });
+
+        // Mouse Wheel Scroll
+        videoContainer.addEventListener('wheel', function(e) {
+            if (!isControlEnabled) return;
+            e.preventDefault();
+            sendControlEvent('SCROLL', { deltaY: e.deltaY });
+        }, { passive: false });
+
+        // Keyboard Event Dispatcher
+        videoContainer.addEventListener('keydown', function(e) {
+            if (!isControlEnabled) return;
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+
+            e.preventDefault();
+            sendControlEvent('KEY_PRESS', { key: e.key });
         });
     }
+
+    // Check Agent Presence (Poll status every 2 seconds)
+    async function checkAgentStatus() {
+        try {
+            const res = await fetch(BASE_URL + '/remote-support/api/control/status/' + SESSION_CODE);
+            const data = await res.json();
+            if (data.success) {
+                // Staff UI
+                if (ROLE === 'STAFF') {
+                    if (data.online) {
+                        if (staffControlStatusBanner) {
+                            staffControlStatusBanner.classList.remove('d-none');
+                            staffControlStatusBanner.classList.add('d-flex');
+                            const resElem = document.getElementById('staffAgentRes');
+                            if (resElem) resElem.textContent = data.resolution || '1920x1080';
+                        }
+                    } else {
+                        if (staffControlStatusBanner) staffControlStatusBanner.classList.add('d-none');
+                    }
+                }
+                // Client UI
+                const agentClientBadge = document.getElementById('agentClientBadge');
+                if (agentClientBadge) {
+                    if (data.online) {
+                        agentClientBadge.className = 'badge bg-success font-monospace';
+                        agentClientBadge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Agent Đã Kết Nối (' + (data.resolution || '1920x1080') + ')';
+                    } else {
+                        agentClientBadge.className = 'badge bg-secondary font-monospace';
+                        agentClientBadge.innerHTML = '<i class="bi bi-circle me-1"></i> Chưa mở Agent';
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+    setInterval(checkAgentStatus, 2000);
+    checkAgentStatus();
 
     // STAFF: Toggle Laser Button
     const btnToggleLaser = document.getElementById('btnToggleLaser');
@@ -589,6 +853,10 @@ $user = Auth::user();
             this.classList.toggle('active', isLaserEnabled);
             this.classList.toggle('btn-warning', isLaserEnabled);
             this.classList.toggle('btn-outline-warning', !isLaserEnabled);
+            if (isLaserEnabled && isControlEnabled) {
+                // Turn off control if laser activated
+                if (btnToggleControl) btnToggleControl.click();
+            }
         });
     }
 

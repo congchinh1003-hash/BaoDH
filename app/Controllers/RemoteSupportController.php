@@ -358,4 +358,137 @@ class RemoteSupportController extends Controller
         $pending = $this->remoteModel->findActiveForClient((int)$user['id']);
         $response->json(['pending' => $pending]);
     }
+
+    /**
+     * AJAX API: IT Staff dispatches mouse/keyboard control event
+     */
+    public function apiControlEvent(Request $request, Response $response): void
+    {
+        $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $body = $decoded;
+            }
+        }
+
+        $code = trim($body['session_code'] ?? '');
+        $eventType = trim($body['event_type'] ?? '');
+        $payload = $body['payload'] ?? [];
+
+        if (!$code || !$eventType) {
+            $response->json(['success' => false, 'message' => 'Missing parameters'], 400);
+            return;
+        }
+
+        $session = $this->remoteModel->findByCode($code);
+        if (!$session) {
+            $response->json(['success' => false, 'message' => 'Session not found'], 404);
+            return;
+        }
+
+        $insertId = $this->remoteModel->addControlEvent((int)$session['id'], $eventType, is_array($payload) ? $payload : ['value' => $payload]);
+        $response->json(['success' => true, 'event_id' => $insertId]);
+    }
+
+    /**
+     * External Agent API: Poll pending mouse/keyboard events (called by PowerShell Agent)
+     */
+    public function apiControlPoll(Request $request, Response $response, string $code): void
+    {
+        $session = $this->remoteModel->findByCode($code);
+        if (!$session) {
+            $response->json(['success' => false, 'message' => 'Session not found'], 404);
+            return;
+        }
+
+        $afterId = (int)($request->input('after_id') ?? 0);
+        $events = $this->remoteModel->getPendingControlEvents((int)$session['id'], $afterId);
+
+        // Update heartbeat passively
+        $this->remoteModel->updateAgentHeartbeat((int)$session['id']);
+
+        $response->json([
+            'success' => true,
+            'events'  => $events,
+            'session_status' => $session['status']
+        ]);
+    }
+
+    /**
+     * External Agent API: Report presence & resolution
+     */
+    public function apiControlHeartbeat(Request $request, Response $response, string $code): void
+    {
+        $body = $request->getBody();
+        if (empty($body)) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) $body = $decoded;
+            }
+        }
+
+        $session = $this->remoteModel->findByCode($code);
+        if (!$session) {
+            $response->json(['success' => false, 'message' => 'Session not found'], 404);
+            return;
+        }
+
+        $res = trim($body['resolution'] ?? '1920x1080');
+        $this->remoteModel->updateAgentHeartbeat((int)$session['id'], $res);
+
+        $response->json(['success' => true]);
+    }
+
+    /**
+     * AJAX API: Check if client's Agent is running
+     */
+    public function apiControlStatus(Request $request, Response $response, string $code): void
+    {
+        $session = $this->remoteModel->findByCode($code);
+        if (!$session) {
+            $response->json(['success' => false, 'message' => 'Session not found'], 404);
+            return;
+        }
+
+        $status = $this->remoteModel->getAgentStatus((int)$session['id']);
+        $response->json(array_merge(['success' => true], $status));
+    }
+
+    /**
+     * Download custom pre-configured TaskFlow-Agent.bat for this session
+     */
+    public function downloadAgent(Request $request, Response $response, string $code): void
+    {
+        $session = $this->remoteModel->findByCode($code);
+        if (!$session) {
+            $response->redirect('/remote-support');
+            return;
+        }
+
+        $cleanCode = htmlspecialchars($session['session_code']);
+        $host = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . ($_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com');
+
+        $batContent = "@echo off\r\n";
+        $batContent .= "chcp 65001 >nul\r\n";
+        $batContent .= "title TaskFlow Remote Desktop Agent - {$cleanCode}\r\n";
+        $batContent .= "color 0B\r\n";
+        $batContent .= "echo ============================================================\r\n";
+        $batContent .= "echo       TASKFLOW ENTERPRISE REMOTE DESKTOP AGENT v2.0\r\n";
+        $batContent .= "echo ============================================================\r\n";
+        $batContent .= "echo Dang khoi dong va ket noi toi Ky thuat vien IT...\r\n";
+        $batContent .= "echo Phien ket noi: {$cleanCode}\r\n";
+        $batContent .= "echo May chu: {$host}\r\n";
+        $batContent .= "echo ------------------------------------------------------------\r\n";
+        $batContent .= "powershell -NoProfile -ExecutionPolicy Bypass -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \$s='{$cleanCode}'; \$h='{$host}'; iex (irm '{$host}/public/agent/TaskFlow-Agent.ps1')\"\r\n";
+        $batContent .= "pause\r\n";
+
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="TaskFlow-Agent-' . $cleanCode . '.bat"');
+        header('Content-Length: ' . strlen($batContent));
+        echo $batContent;
+        exit;
+    }
 }

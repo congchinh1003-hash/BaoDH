@@ -272,7 +272,7 @@ $router->post('/projects/api/quick-create', [ProjectController::class, 'ajaxQuic
 $router->post('/projects/api/add-comment', [ProjectController::class, 'ajaxAddComment'], [AuthMiddleware::class]);
 $router->get('/projects/api/eligible-parents', [ProjectController::class, 'ajaxGetEligibleParents'], [AuthMiddleware::class]);
 
-// REMOTE SUPPORT ASSISTANCE (WEBRTC LIVE DESKTOP)
+// REMOTE SUPPORT ASSISTANCE (WEBRTC LIVE DESKTOP & INTERNAL REMOTE CONTROL)
 $router->get('/remote-support', [RemoteSupportController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/remote-support/join', [RemoteSupportController::class, 'joinByPin'], [AuthMiddleware::class]);
 $router->get('/remote-support/request/{ticketId}', [RemoteSupportController::class, 'requestFromTicket'], [AuthMiddleware::class]);
@@ -283,4 +283,11 @@ $router->get('/remote-support/api/signal/{code}', [RemoteSupportController::clas
 $router->post('/remote-support/api/status/{code}', [RemoteSupportController::class, 'apiUpdateStatus'], [AuthMiddleware::class]);
 $router->post('/remote-support/api/ultraviewer/{code}', [RemoteSupportController::class, 'apiSaveUltraviewer'], [AuthMiddleware::class]);
 $router->get('/remote-support/api/check-pending', [RemoteSupportController::class, 'apiCheckPending'], [AuthMiddleware::class]);
+
+// NATIVE REMOTE CONTROL AGENT APIS
+$router->post('/remote-support/api/control/event', [RemoteSupportController::class, 'apiControlEvent'], [AuthMiddleware::class]);
+$router->get('/remote-support/api/control/poll/{code}', [RemoteSupportController::class, 'apiControlPoll']);
+$router->post('/remote-support/api/control/heartbeat/{code}', [RemoteSupportController::class, 'apiControlHeartbeat']);
+$router->get('/remote-support/api/control/status/{code}', [RemoteSupportController::class, 'apiControlStatus'], [AuthMiddleware::class]);
+$router->get('/remote-support/download-agent/{code}', [RemoteSupportController::class, 'downloadAgent']);
 

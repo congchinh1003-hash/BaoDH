@@ -52,6 +52,19 @@ class RemoteSession extends Model
                     INDEX `idx_session_sig` (`session_id`, `id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
+            $db->exec("
+                CREATE TABLE IF NOT EXISTS `remote_support_control_events` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `session_id` INT NOT NULL,
+                    `event_type` VARCHAR(30) NOT NULL,
+                    `payload` TEXT NOT NULL,
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_ctrl_sess` (`session_id`, `id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+            try {
+                $db->exec("ALTER TABLE `remote_support_sessions` ADD COLUMN `agent_online` TINYINT(1) DEFAULT 0, ADD COLUMN `agent_resolution` VARCHAR(30) NULL, ADD COLUMN `agent_last_seen` DATETIME NULL");
+            } catch (\Throwable $e) {}
         } catch (\Throwable $e) {
             error_log("RemoteSession ensureTablesExist notice: " . $e->getMessage());
         }
@@ -232,5 +245,67 @@ class RemoteSession extends Model
         $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function addControlEvent(int $sessionId, string $eventType, array $payload): int
+    {
+        $stmt = $this->db->prepare("
+            INSERT INTO remote_support_control_events (session_id, event_type, payload)
+            VALUES (:session_id, :event_type, :payload)
+        ");
+        $stmt->execute([
+            'session_id' => $sessionId,
+            'event_type' => $eventType,
+            'payload'    => json_encode($payload, JSON_UNESCAPED_UNICODE)
+        ]);
+        $id = (int)$this->db->lastInsertId();
+
+        // Periodically purge old events (1 in 15 chance)
+        if (mt_rand(1, 15) === 1) {
+            try {
+                $this->db->exec("DELETE FROM remote_support_control_events WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 SECOND)");
+            } catch (\Throwable $e) {}
+        }
+
+        return $id;
+    }
+
+    public function getPendingControlEvents(int $sessionId, int $afterId = 0): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT id, event_type, payload FROM remote_support_control_events
+            WHERE session_id = :session_id AND id > :after_id
+            ORDER BY id ASC LIMIT 50
+        ");
+        $stmt->execute([
+            'session_id' => $sessionId,
+            'after_id'   => $afterId
+        ]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateAgentHeartbeat(int $sessionId, ?string $resolution = null): void
+    {
+        $stmt = $this->db->prepare("
+            UPDATE remote_support_sessions 
+            SET agent_online = 1, agent_resolution = COALESCE(:res, agent_resolution), agent_last_seen = NOW()
+            WHERE id = :id
+        ");
+        $stmt->execute(['res' => $resolution, 'id' => $sessionId]);
+    }
+
+    public function getAgentStatus(int $sessionId): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT agent_online, agent_resolution,
+                   (agent_last_seen IS NOT NULL AND agent_last_seen >= DATE_SUB(NOW(), INTERVAL 8 SECOND)) as is_active
+            FROM remote_support_sessions WHERE id = :id
+        ");
+        $stmt->execute(['id' => $sessionId]);
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
+        return [
+            'online'     => (bool)($res['is_active'] ?? false),
+            'resolution' => $res['agent_resolution'] ?? '1920x1080'
+        ];
     }
 }
