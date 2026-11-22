@@ -130,6 +130,11 @@ $user = Auth::user();
                         <span class="badge bg-success">ĐÃ KẾT NỐI</span>
                     </div>
 
+                    <!-- Realtime Keystroke Feedback Badge for Staff -->
+                    <div id="keyFeedbackBadge" class="position-absolute top-0 start-50 translate-middle-x mt-5 px-3 py-1 bg-dark bg-opacity-90 text-warning font-monospace rounded-pill border border-warning shadow d-none" style="z-index: 50; font-size: 0.85rem; pointer-events: none;">
+                        <i class="bi bi-keyboard me-1"></i> <span id="keyFeedbackText"></span>
+                    </div>
+
                     <!-- Quick Hotkeys Bar for Staff -->
                     <div id="staffQuickKeysBar" class="position-absolute top-0 end-0 m-2 p-2 bg-dark bg-opacity-90 rounded-3 border border-secondary d-none flex-column gap-1 shadow" style="z-index: 25; width: 175px; font-size: 0.75rem;">
                         <div class="text-warning fw-bold text-uppercase d-flex justify-content-between align-items-center mb-1" style="font-size:0.65rem;">
@@ -319,6 +324,33 @@ $user = Auth::user();
     100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
 }
 .letter-spacing-1 { letter-spacing: 2px; }
+
+/* Tactile Click Ripple for IT Remote Control */
+.remote-click-ripple {
+    position: fixed;
+    width: 30px;
+    height: 30px;
+    margin-left: -15px;
+    margin-top: -15px;
+    border-radius: 50%;
+    border: 3px solid #00d2ff;
+    background: rgba(0, 210, 255, 0.45);
+    pointer-events: none;
+    z-index: 999999;
+    animation: clickRippleAnim 0.45s ease-out forwards;
+}
+.remote-click-ripple.right {
+    border-color: #ff9900;
+    background: rgba(255, 153, 0, 0.45);
+}
+.remote-click-ripple.double {
+    border-color: #00ffcc;
+    background: rgba(0, 255, 204, 0.45);
+}
+@keyframes clickRippleAnim {
+    0% { transform: scale(0.3); opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
 </style>
 
 <!-- ===================================================================== -->
@@ -708,87 +740,162 @@ $user = Auth::user();
         });
     }
 
-    // MOUSE & KEYBOARD EVENTS ON REMOTE SCREEN
+    // =========================================================================
+    // DIRECT MOUSE & KEYBOARD CONTROL (REMOTE DESKTOP ENGINE)
+    // =========================================================================
+    const keyFeedbackBadge = document.getElementById('keyFeedbackBadge');
+    const keyFeedbackText = document.getElementById('keyFeedbackText');
+    let keyFeedbackTimer = null;
+    let isMouseOverScreen = false;
+    let isMouseDown = false;
+
+    function showKeyToast(label) {
+        if (!keyFeedbackBadge || !keyFeedbackText) return;
+        keyFeedbackText.textContent = label;
+        keyFeedbackBadge.classList.remove('d-none');
+        clearTimeout(keyFeedbackTimer);
+        keyFeedbackTimer = setTimeout(() => {
+            keyFeedbackBadge.classList.add('d-none');
+        }, 1200);
+    }
+
+    function showClickRipple(clientX, clientY, type = 'left') {
+        const ripple = document.createElement('div');
+        ripple.className = 'remote-click-ripple ' + type;
+        ripple.style.left = clientX + 'px';
+        ripple.style.top = clientY + 'px';
+        document.body.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 450);
+    }
+
+    // Accurate coordinate normalization removing letterbox & pillarbox black margins
+    function getNormalizedContentCoords(e) {
+        const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
+        if (!targetElem) return null;
+
+        const rect = targetElem.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+
+        let contentLeft = 0;
+        let contentTop = 0;
+        let contentWidth = rect.width;
+        let contentHeight = rect.height;
+
+        if (targetElem.tagName === 'VIDEO' && targetElem.videoWidth > 0 && targetElem.videoHeight > 0) {
+            const videoRatio = targetElem.videoWidth / targetElem.videoHeight;
+            const elemRatio = rect.width / rect.height;
+            if (elemRatio > videoRatio) {
+                // Pillarbox: black bars on left & right
+                contentHeight = rect.height;
+                contentWidth = rect.height * videoRatio;
+                contentLeft = (rect.width - contentWidth) / 2;
+                contentTop = 0;
+            } else {
+                // Letterbox: black bars on top & bottom
+                contentWidth = rect.width;
+                contentHeight = rect.width / videoRatio;
+                contentLeft = 0;
+                contentTop = (rect.height - contentHeight) / 2;
+            }
+        } else if (targetElem.tagName === 'IMG' && targetElem.naturalWidth > 0 && targetElem.naturalHeight > 0) {
+            const imgRatio = targetElem.naturalWidth / targetElem.naturalHeight;
+            const elemRatio = rect.width / rect.height;
+            if (elemRatio > imgRatio) {
+                contentHeight = rect.height;
+                contentWidth = rect.height * imgRatio;
+                contentLeft = (rect.width - contentWidth) / 2;
+                contentTop = 0;
+            } else {
+                contentWidth = rect.width;
+                contentHeight = rect.width / imgRatio;
+                contentLeft = 0;
+                contentTop = (rect.height - contentHeight) / 2;
+            }
+        }
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Check if clicked inside actual desktop image
+        if (mouseX < contentLeft || mouseX > contentLeft + contentWidth ||
+            mouseY < contentTop || mouseY > contentTop + contentHeight) {
+            return null; // clicked outside on black bars
+        }
+
+        const normX = Math.max(0, Math.min(1, (mouseX - contentLeft) / contentWidth));
+        const normY = Math.max(0, Math.min(1, (mouseY - contentTop) / contentHeight));
+
+        return { x: normX, y: normY, clientX: e.clientX, clientY: e.clientY };
+    }
+
     if (videoContainer && ROLE === 'STAFF') {
-        // Prevent right click context menu in control mode
+        videoContainer.addEventListener('mouseenter', () => { isMouseOverScreen = true; });
+        videoContainer.addEventListener('mouseleave', () => { isMouseOverScreen = false; isMouseDown = false; });
+
+        // Context Menu (Right Click)
         videoContainer.addEventListener('contextmenu', function(e) {
             if (isControlEnabled) {
                 e.preventDefault();
-                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
-                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
-                    ? targetElem.getBoundingClientRect() 
-                    : videoContainer.getBoundingClientRect();
-
-                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-                sendControlEvent('MOUSE_CLICK', { x: x, y: y, button: 'right' });
+                const coords = getNormalizedContentCoords(e);
+                if (coords) {
+                    showClickRipple(e.clientX, e.clientY, 'right');
+                    sendControlEvent('MOUSE_CLICK', { x: coords.x, y: coords.y, button: 'right' });
+                }
             }
         });
 
-        // Mouse Down (Left click)
+        // Mouse Down (Left click / Drag start)
         videoContainer.addEventListener('mousedown', function(e) {
             if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
+            const coords = getNormalizedContentCoords(e);
+            if (!coords) return;
+
             if (isControlEnabled) {
-                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
-                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
-                    ? targetElem.getBoundingClientRect() 
-                    : videoContainer.getBoundingClientRect();
-
-                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
                 if (e.button === 0) {
-                    sendControlEvent('MOUSE_CLICK', { x: x, y: y, button: 'left' });
+                    isMouseDown = true;
+                    showClickRipple(e.clientX, e.clientY, 'left');
+                    sendControlEvent('MOUSE_DOWN', { x: coords.x, y: coords.y });
                 }
             } else if (isLaserEnabled) {
-                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
-                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
-                    ? targetElem.getBoundingClientRect() 
-                    : videoContainer.getBoundingClientRect();
-
-                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-                drawStaffLaser(x, y);
-                sendSignal('POINTER', { x: x, y: y });
+                drawStaffLaser(coords.x, coords.y);
+                sendSignal('POINTER', { x: coords.x, y: coords.y });
             }
         });
 
-        // Double click
+        // Mouse Up (Left click release / Drag end)
+        window.addEventListener('mouseup', function(e) {
+            if (isControlEnabled && isMouseDown) {
+                isMouseDown = false;
+                const coords = getNormalizedContentCoords(e);
+                sendControlEvent('MOUSE_UP', { x: coords ? coords.x : 0, y: coords ? coords.y : 0 });
+            }
+        });
+
+        // Double Click
         videoContainer.addEventListener('dblclick', function(e) {
             if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
             if (isControlEnabled) {
-                const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
-                const rect = (targetElem && !targetElem.classList.contains('d-none')) 
-                    ? targetElem.getBoundingClientRect() 
-                    : videoContainer.getBoundingClientRect();
-
-                const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-                sendControlEvent('MOUSE_CLICK', { x: x, y: y, button: 'left', double: true });
+                const coords = getNormalizedContentCoords(e);
+                if (coords) {
+                    showClickRipple(e.clientX, e.clientY, 'double');
+                    sendControlEvent('MOUSE_CLICK', { x: coords.x, y: coords.y, button: 'left', double: true });
+                }
             }
         });
 
-        // Mouse Move (throttled to 60ms)
+        // Mouse Move (Throttled to 50ms)
         videoContainer.addEventListener('mousemove', function(e) {
             if (!isControlEnabled) return;
             if (e.target.closest('#videoToolbar') || e.target.closest('#staffWaitingBox') || e.target.closest('#staffQuickKeysBar')) return;
 
             const now = Date.now();
-            if (now - lastMouseMoveTime < 60) return;
+            if (now - lastMouseMoveTime < 50) return;
             lastMouseMoveTime = now;
 
-            const targetElem = (!remoteVideo.classList.contains('d-none')) ? remoteVideo : remoteFrameImg;
-            const rect = (targetElem && !targetElem.classList.contains('d-none')) 
-                ? targetElem.getBoundingClientRect() 
-                : videoContainer.getBoundingClientRect();
-
-            const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-            sendControlEvent('MOUSE_MOVE', { x: x, y: y });
+            const coords = getNormalizedContentCoords(e);
+            if (coords) {
+                sendControlEvent('MOUSE_MOVE', { x: coords.x, y: coords.y });
+            }
         });
 
         // Mouse Wheel Scroll
@@ -798,13 +905,66 @@ $user = Auth::user();
             sendControlEvent('SCROLL', { deltaY: e.deltaY });
         }, { passive: false });
 
-        // Keyboard Event Dispatcher
-        videoContainer.addEventListener('keydown', function(e) {
+        // Global Real-time Keyboard Capture (Types directly into remote machine)
+        window.addEventListener('keydown', function(e) {
             if (!isControlEnabled) return;
-            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+            // Only capture when mouse is over remote desktop or videoContainer is focused
+            if (!isMouseOverScreen && document.activeElement !== videoContainer) return;
 
-            e.preventDefault();
-            sendControlEvent('KEY_PRESS', { key: e.key });
+            // Do not intercept if user is typing in a real input box (like chat or hotkey input)
+            if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+                return;
+            }
+
+            // Handle Ctrl shortcuts (Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+Z, Ctrl+S, Ctrl+X, etc.)
+            if (e.ctrlKey) {
+                if (e.key !== 'Control') {
+                    e.preventDefault();
+                    const keyName = 'CTRL_' + e.key.toUpperCase();
+                    sendControlEvent('KEY_PRESS', { key: keyName });
+                    showKeyToast('Ctrl + ' + e.key.toUpperCase());
+                }
+                return;
+            }
+
+            // Handle Alt+F4
+            if (e.altKey && e.key === 'F4') {
+                e.preventDefault();
+                sendControlEvent('HOTKEY', { hotkey: 'alt_f4' });
+                showKeyToast('Alt + F4');
+                return;
+            }
+
+            // Handle Windows Key
+            if (e.key === 'Meta' || e.key === 'OS') {
+                e.preventDefault();
+                sendControlEvent('HOTKEY', { hotkey: 'win' });
+                showKeyToast('Windows Key');
+                return;
+            }
+
+            // Handle Navigation & Functional Keys
+            const specialKeys = ['Tab', 'Backspace', 'Space', ' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Delete', 'Escape', 'Enter', 'Home', 'End', 'PageUp', 'PageDown'];
+            if (specialKeys.includes(e.key)) {
+                e.preventDefault();
+                sendControlEvent('KEY_PRESS', { key: e.key });
+                showKeyToast(e.key === ' ' ? 'Space' : '[' + e.key + ']');
+                return;
+            }
+
+            // Handle Function Keys (F1 - F12)
+            if (e.key.startsWith('F') && e.key.length <= 3 && !isNaN(e.key.substring(1))) {
+                e.preventDefault();
+                sendControlEvent('KEY_PRESS', { key: e.key });
+                showKeyToast('[' + e.key + ']');
+                return;
+            }
+
+            // Handle printable characters (letters, numbers, symbols)
+            if (e.key.length === 1) {
+                sendControlEvent('KEY_PRESS', { key: e.key });
+                showKeyToast("'" + e.key + "'");
+            }
         });
     }
 

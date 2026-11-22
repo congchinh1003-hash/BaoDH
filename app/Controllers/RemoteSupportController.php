@@ -477,19 +477,38 @@ class RemoteSupportController extends Controller
         $proto = $isHttps ? 'https' : 'http';
         $host = $proto . "://" . ($_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com');
 
-        $batContent = "@echo off\r\n";
-        $batContent .= "chcp 65001 >nul\r\n";
-        $batContent .= "title TaskFlow Remote Desktop Agent - {$cleanCode}\r\n";
-        $batContent .= "color 0B\r\n";
-        $batContent .= "echo ============================================================\r\n";
-        $batContent .= "echo       TASKFLOW ENTERPRISE REMOTE DESKTOP AGENT v2.0\r\n";
-        $batContent .= "echo ============================================================\r\n";
-        $batContent .= "echo Dang khoi dong va ket noi toi Ky thuat vien IT...\r\n";
-        $batContent .= "echo Phien ket noi: {$cleanCode}\r\n";
-        $batContent .= "echo May chu: {$host}\r\n";
-        $batContent .= "echo ------------------------------------------------------------\r\n";
-        $batContent .= "powershell -NoProfile -ExecutionPolicy Bypass -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \$s='{$cleanCode}'; \$h='{$host}'; iex (irm '{$host}/public/agent/TaskFlow-Agent.ps1')\"\r\n";
-        $batContent .= "pause\r\n";
+        $ps1Path = dirname(__DIR__, 2) . '/public/agent/TaskFlow-Agent.ps1';
+        $ps1Content = file_exists($ps1Path) ? file_get_contents($ps1Path) : '';
+
+        if (!empty($ps1Content)) {
+            // Self-contained hybrid BAT + PowerShell script (Runs 100% locally with zero internet dependencies)
+            $batContent = "<# :\r\n";
+            $batContent .= "@echo off\r\n";
+            $batContent .= "setlocal\r\n";
+            $batContent .= "chcp 65001 >nul\r\n";
+            $batContent .= "title TaskFlow Remote Desktop Agent - {$cleanCode}\r\n";
+            $batContent .= "color 0B\r\n";
+            $batContent .= "echo ============================================================\r\n";
+            $batContent .= "echo       TASKFLOW ENTERPRISE REMOTE DESKTOP AGENT v2.0\r\n";
+            $batContent .= "echo ============================================================\r\n";
+            $batContent .= "echo Dang khoi dong va ket noi toi Ky thuat vien IT...\r\n";
+            $batContent .= "echo Phien ket noi: {$cleanCode}\r\n";
+            $batContent .= "echo May chu: {$host}\r\n";
+            $batContent .= "echo ------------------------------------------------------------\r\n";
+            $batContent .= "powershell -NoProfile -ExecutionPolicy Bypass -Command \"\$s='{$cleanCode}'; \$h='{$host}'; Invoke-Expression ([System.IO.File]::ReadAllText('%~f0'))\"\r\n";
+            $batContent .= "goto :eof\r\n";
+            $batContent .= "#>\r\n";
+            $batContent .= $ps1Content;
+        } else {
+            // Fallback to online fetch if file missing
+            $batContent = "@echo off\r\n";
+            $batContent .= "chcp 65001 >nul\r\n";
+            $batContent .= "title TaskFlow Remote Desktop Agent - {$cleanCode}\r\n";
+            $batContent .= "color 0B\r\n";
+            $batContent .= "echo Dang khoi dong va ket noi toi Ky thuat vien IT...\r\n";
+            $batContent .= "powershell -NoProfile -ExecutionPolicy Bypass -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \$s='{$cleanCode}'; \$h='{$host}'; iex (irm '{$host}/public/agent/TaskFlow-Agent.ps1')\"\r\n";
+            $batContent .= "pause\r\n";
+        }
 
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="TaskFlow-Agent-' . $cleanCode . '.bat"');

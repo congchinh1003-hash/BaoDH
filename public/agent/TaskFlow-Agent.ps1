@@ -22,6 +22,9 @@ public class Win32Input {
     [DllImport("user32.dll")]
     public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
 
+    [DllImport("user32.dll")]
+    public static extern short VkKeyScan(char ch);
+
     public const uint MOUSEEVENTF_LEFTDOWN   = 0x0002;
     public const uint MOUSEEVENTF_LEFTUP     = 0x0004;
     public const uint MOUSEEVENTF_RIGHTDOWN  = 0x0008;
@@ -30,43 +33,44 @@ public class Win32Input {
     public const uint MOUSEEVENTF_MIDDLEUP   = 0x0040;
     public const uint MOUSEEVENTF_WHEEL      = 0x0800;
     public const uint KEYEVENTF_KEYUP        = 0x0002;
-    public const uint KEYEVENTF_EXTENDEDKEY  = 0x0001;
 
     public static void ClickLeft(int x, int y) {
         SetCursorPos(x, y);
-        mouse_event(MOUSEEVENTF_LEFTDOWN, (uint)x, (uint)y, 0, 0);
-        mouse_event(MOUSEEVENTF_LEFTUP, (uint)x, (uint)y, 0, 0);
+        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+        System.Threading.Thread.Sleep(10);
+        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
     }
 
     public static void DoubleClick(int x, int y) {
         ClickLeft(x, y);
-        System.Threading.Thread.Sleep(60);
+        System.Threading.Thread.Sleep(50);
         ClickLeft(x, y);
     }
 
     public static void ClickRight(int x, int y) {
         SetCursorPos(x, y);
-        mouse_event(MOUSEEVENTF_RIGHTDOWN, (uint)x, (uint)y, 0, 0);
-        mouse_event(MOUSEEVENTF_RIGHTUP, (uint)x, (uint)y, 0, 0);
+        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+        System.Threading.Thread.Sleep(10);
+        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
     }
 
     public static void MouseDown(int x, int y) {
         SetCursorPos(x, y);
-        mouse_event(MOUSEEVENTF_LEFTDOWN, (uint)x, (uint)y, 0, 0);
+        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
     }
 
     public static void MouseUp(int x, int y) {
         SetCursorPos(x, y);
-        mouse_event(MOUSEEVENTF_LEFTUP, (uint)x, (uint)y, 0, 0);
+        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
     }
 
     public static void Scroll(int delta) {
-        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (uint)delta, 0);
+        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, unchecked((uint)delta), 0);
     }
 
     public static void PressKey(byte vkCode) {
         keybd_event(vkCode, 0, 0, 0);
-        System.Threading.Thread.Sleep(20);
+        System.Threading.Thread.Sleep(15);
         keybd_event(vkCode, 0, KEYEVENTF_KEYUP, 0);
     }
 
@@ -76,6 +80,28 @@ public class Win32Input {
         System.Threading.Thread.Sleep(20);
         keybd_event(key, 0, KEYEVENTF_KEYUP, 0);
         keybd_event(mod, 0, KEYEVENTF_KEYUP, 0);
+    }
+
+    public static void TypeChar(char c) {
+        short vk = VkKeyScan(c);
+        if (vk == -1) return;
+        byte vkCode = (byte)(vk & 0xff);
+        int shiftState = (vk >> 8) & 0xff;
+        bool shift = (shiftState & 1) != 0;
+        bool ctrl = (shiftState & 2) != 0;
+        bool alt = (shiftState & 4) != 0;
+
+        if (shift) keybd_event(0x10, 0, 0, 0);
+        if (ctrl) keybd_event(0x11, 0, 0, 0);
+        if (alt) keybd_event(0x12, 0, 0, 0);
+
+        keybd_event(vkCode, 0, 0, 0);
+        System.Threading.Thread.Sleep(10);
+        keybd_event(vkCode, 0, KEYEVENTF_KEYUP, 0);
+
+        if (alt) keybd_event(0x12, 0, KEYEVENTF_KEYUP, 0);
+        if (ctrl) keybd_event(0x11, 0, KEYEVENTF_KEYUP, 0);
+        if (shift) keybd_event(0x10, 0, KEYEVENTF_KEYUP, 0);
     }
 }
 "@
@@ -140,24 +166,43 @@ $lastHeartbeat = [DateTime]::Now
 
 # Virtual Key Mapping
 $vkMap = @{
-    "ENTER"     = 0x0D
-    "BACKSPACE" = 0x08
-    "TAB"       = 0x09
-    "ESCAPE"    = 0x1B
-    "SPACE"     = 0x20
-    "WIN"       = 0x5B
-    "UP"        = 0x26
-    "DOWN"      = 0x28
-    "LEFT"      = 0x25
-    "RIGHT"     = 0x27
-    "DELETE"    = 0x2E
-    "HOME"      = 0x24
-    "END"       = 0x23
-    "PAGEUP"    = 0x21
-    "PAGEDOWN"  = 0x22
+    "ENTER"      = 0x0D
+    "BACKSPACE"  = 0x08
+    "TAB"        = 0x09
+    "ESCAPE"     = 0x1B
+    "SPACE"      = 0x20
+    " "          = 0x20
+    "WIN"        = 0x5B
+    "META"       = 0x5B
+    "WINDOWS"    = 0x5B
+    "UP"         = 0x26
+    "ARROWUP"    = 0x26
+    "DOWN"       = 0x28
+    "ARROWDOWN"  = 0x28
+    "LEFT"       = 0x25
+    "ARROWLEFT"  = 0x25
+    "RIGHT"      = 0x27
+    "ARROWRIGHT" = 0x27
+    "DELETE"     = 0x2E
+    "HOME"       = 0x24
+    "END"        = 0x23
+    "PAGEUP"     = 0x21
+    "PAGEDOWN"   = 0x22
+    "F1"         = 0x70
+    "F2"         = 0x71
+    "F3"         = 0x72
+    "F4"         = 0x73
+    "F5"         = 0x74
+    "F6"         = 0x75
+    "F7"         = 0x76
+    "F8"         = 0x77
+    "F9"         = 0x78
+    "F10"        = 0x79
+    "F11"        = 0x7A
+    "F12"        = 0x7B
 }
 
-# Main Control Loop (75ms polling for real-time responsiveness)
+# Main Control Loop (50ms polling for real-time responsiveness)
 while ($true) {
     try {
         # Send heartbeat every 4 seconds
@@ -168,7 +213,7 @@ while ($true) {
         }
 
         # Poll pending events
-        $resp = Invoke-RestMethod -Uri "$h/remote-support/api/control/poll/$s?after_id=$lastId" -Method Get -TimeoutSec 4
+        $resp = Invoke-RestMethod -Uri "$h/remote-support/api/control/poll/$s?after_id=$lastId" -Method Get -TimeoutSec 3
         if ($resp -and $resp.success) {
             if ($resp.session_status -eq 'ENDED') {
                 Write-Host ""
@@ -193,13 +238,16 @@ while ($true) {
                     $targetY = [Math]::Round($p.y * $screenHeight)
                     if ($p.button -eq 'right') {
                         [Win32Input]::ClickRight($targetX, $targetY)
+                        Write-Host " [ACTION] Chuot phai: ($targetX, $targetY)" -ForegroundColor DarkCyan
                     } elseif ($p.double) {
                         [Win32Input]::DoubleClick($targetX, $targetY)
+                        Write-Host " [ACTION] Double Click: ($targetX, $targetY)" -ForegroundColor Cyan
                     } else {
                         [Win32Input]::ClickLeft($targetX, $targetY)
+                        Write-Host " [ACTION] Chuot trai: ($targetX, $targetY)" -ForegroundColor Green
                     }
                 }
-                # MOUSE DOWN / UP
+                # MOUSE DOWN / UP (DRAG & SELECT)
                 elseif ($type -eq 'MOUSE_DOWN') {
                     $targetX = [Math]::Round($p.x * $screenWidth)
                     $targetY = [Math]::Round($p.y * $screenHeight)
@@ -212,21 +260,44 @@ while ($true) {
                 }
                 # KEY PRESS
                 elseif ($type -eq 'KEY_PRESS') {
-                    $keyUpper = "$($p.key)".ToUpper()
-                    if ($vkMap.ContainsKey($keyUpper)) {
+                    $rawKey = "$($p.key)"
+                    $keyUpper = $rawKey.ToUpper()
+
+                    # Handle Ctrl shortcuts
+                    if ($keyUpper.StartsWith("CTRL_")) {
+                        $charPart = $keyUpper.Substring(5)
+                        if ($charPart.Length -eq 1) {
+                            $c = [char]$charPart[0]
+                            $vk = [int]$c
+                            [Win32Input]::SendHotkey(0x11, [byte]$vk)
+                            Write-Host " [ACTION] Ctrl+$charPart" -ForegroundColor Yellow
+                        }
+                    }
+                    elseif ($vkMap.ContainsKey($keyUpper)) {
                         [Win32Input]::PressKey($vkMap[$keyUpper])
-                    } else {
-                        try {
-                            [System.Windows.Forms.SendKeys]::SendWait($p.key)
-                        } catch {}
+                        Write-Host " [ACTION] Phim dac biet: [$keyUpper]" -ForegroundColor Yellow
+                    }
+                    elseif ($rawKey.Length -eq 1) {
+                        # Single character typing (letters, numbers, symbols, uppercase)
+                        [Win32Input]::TypeChar($rawKey[0])
+                        Write-Host " [ACTION] Go phim: '$rawKey'" -ForegroundColor DarkYellow
                     }
                 }
-                # TEXT INPUT (PASTE OR TYPE STRINGS)
+                # TEXT INPUT (PASTE STRINGS)
                 elseif ($type -eq 'TEXT_INPUT') {
                     $textToType = $p.text
                     if ($textToType) {
-                        [System.Windows.Forms.Clipboard]::SetText($textToType)
-                        [Win32Input]::SendHotkey(0x11, 0x56) # Ctrl + V
+                        try {
+                            if (Get-Command Set-Clipboard -ErrorAction SilentlyContinue) {
+                                Set-Clipboard -Value $textToType
+                            } else {
+                                [System.Windows.Forms.Clipboard]::SetText($textToType)
+                            }
+                            [Win32Input]::SendHotkey(0x11, 0x56) # Ctrl + V
+                            Write-Host " [ACTION] Dan van ban: `"$textToType`"" -ForegroundColor Magenta
+                        } catch {
+                            Write-Host " [LOI] Khong the dan clipboard: $($_.Exception.Message)" -ForegroundColor Red
+                        }
                     }
                 }
                 # SHORTCUTS / HOTKEYS
@@ -234,18 +305,25 @@ while ($true) {
                     $hk = "$($p.hotkey)".ToLower()
                     if ($hk -eq 'win') {
                         [Win32Input]::PressKey(0x5B) # Windows key
+                        Write-Host " [ACTION] Bat Start Menu" -ForegroundColor Yellow
                     } elseif ($hk -eq 'run') {
                         [Win32Input]::SendHotkey(0x5B, 0x52) # Win + R
+                        Write-Host " [ACTION] Mo Run (Win+R)" -ForegroundColor Yellow
                     } elseif ($hk -eq 'taskmgr') {
                         Start-Process "taskmgr.exe"
+                        Write-Host " [ACTION] Mo Task Manager" -ForegroundColor Yellow
                     } elseif ($hk -eq 'explorer') {
                         [Win32Input]::SendHotkey(0x5B, 0x45) # Win + E
+                        Write-Host " [ACTION] Mo File Explorer" -ForegroundColor Yellow
                     } elseif ($hk -eq 'cmd') {
                         Start-Process "cmd.exe"
+                        Write-Host " [ACTION] Mo CMD" -ForegroundColor Yellow
                     } elseif ($hk -eq 'powershell') {
                         Start-Process "powershell.exe"
+                        Write-Host " [ACTION] Mo PowerShell" -ForegroundColor Yellow
                     } elseif ($hk -eq 'alt_f4') {
                         [Win32Input]::SendHotkey(0x12, 0x73) # Alt + F4
+                        Write-Host " [ACTION] Dong Cua So (Alt+F4)" -ForegroundColor Yellow
                     }
                 }
                 # SCROLL
@@ -258,7 +336,7 @@ while ($true) {
     } catch {
         # Continue on temporary network blips
     }
-    Start-Sleep -Milliseconds 70
+    Start-Sleep -Milliseconds 50
 }
 
 Write-Host "Cam on ban da su dung TaskFlow Remote Assistance." -ForegroundColor Cyan
