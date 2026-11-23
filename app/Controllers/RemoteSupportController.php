@@ -672,13 +672,21 @@ class RemoteSupportController extends Controller
 
         $userId = (int)$user['id'];
         $isEndUser = ($userId === (int)$session['enduser_id']);
-        $isItStaff = ($userId === (int)$session['it_id']) || Auth::isAdmin();
 
-        if (!$isEndUser && !$isItStaff) {
+        if (!$isEndUser) {
             $response->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện thao tác này'], 403);
             return;
         }
 
+        if (($session['status'] ?? '') !== 'pending') {
+            $response->json(['success' => false, 'message' => 'Yeu cau da duoc xu ly hoac da ket thuc'], 409);
+            return;
+        }
+        if (!empty($session['expires_at']) && strtotime($session['expires_at']) < time()) {
+            $this->remoteModel->updateVncStatus($sessionId, 'expired');
+            $response->json(['success' => false, 'message' => 'Yeu cau da het han 30 giay va tu huy'], 410);
+            return;
+        }
         $newStatus = ($action === 'accept') ? 'accepted' : 'rejected';
         $this->remoteModel->updateVncStatus($sessionId, $newStatus);
 
@@ -702,7 +710,10 @@ class RemoteSupportController extends Controller
         // Build noVNC iframe URL
         $wsUrl = $session['ws_url'];
         $pass = urlencode($session['session_pass']);
-        $iframeUrl = "{$wsUrl}?scale=true&password={$pass}";
+        if (($session['status'] ?? '') === 'pending' && $this->remoteModel->expireVncSessionIfNeeded((int)$id)) {
+            $session['status'] = 'expired';
+        }
+        $iframeUrl = ($session['status'] === 'accepted') ? $wsUrl . '?scale=true&view_only=false&password=' . $pass : '';
 
         $response->json([
             'status'       => $session['status'],

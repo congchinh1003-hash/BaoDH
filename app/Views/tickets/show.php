@@ -2607,9 +2607,8 @@ function updateChecklistProgress() {
                         Khung điều khiển sẽ tự động mở ngay khi người dùng bấm <strong>"Chấp Nhận Cho Điều Khiển"</strong>.
                     </p>
                     <div class="mb-4">
-                        <button type="button" class="btn btn-success fw-bold px-4 py-2 rounded-pill shadow-lg animate__animated animate__pulse animate__infinite" id="btnBypassAcceptTest">
-                            <i class="bi bi-play-circle-fill me-1"></i> [Test 1 Máy] Bấm Vào Đây Để Tự Chấp Nhận & Bắt Đầu Ngay
-                        </button>
+                        <div class="text-warning fw-bold" id="vncCountdownText">Con 30 giay cho user chap nhan</div>
+                        <div class="mt-3"><input id="vncTargetIp" class="form-control form-control-sm mx-auto" style="max-width:320px" placeholder="IP LAN may enduser, vd 192.168.1.50"></div>
                     </div>
                     <div class="p-3 bg-secondary bg-opacity-25 rounded-3 d-inline-block text-start border border-secondary" style="max-width: 540px; font-size: 0.8rem;">
                         <div class="text-warning fw-bold mb-1"><i class="bi bi-info-circle me-1"></i> Yêu cầu kỹ thuật để kết nối noVNC:</div>
@@ -2643,33 +2642,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let vncSessionId = null;
     let vncPollTimer = null;
 
-    const btnBypassAcceptTest = document.getElementById('btnBypassAcceptTest');
-    if (btnBypassAcceptTest) {
-        btnBypassAcceptTest.addEventListener('click', function() {
-            if (!vncSessionId) return;
-            btnBypassAcceptTest.disabled = true;
-            btnBypassAcceptTest.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang chấp nhận...';
-            fetch('<?= $baseUrl ?>/remote-support/vnc/respond', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
-                body: JSON.stringify({ session_id: vncSessionId, action: 'accept', _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    pollVncSessionStatus();
-                } else {
-                    alert(data.message || 'Lỗi chấp nhận');
-                    btnBypassAcceptTest.disabled = false;
-                }
-            })
-            .catch(err => {
-                alert('Lỗi: ' + err.message);
-                btnBypassAcceptTest.disabled = false;
-            });
-        });
-    }
-
     const btnOpenNovncModal = document.getElementById('btnOpenNovncModal');
     if (btnOpenNovncModal) {
         btnOpenNovncModal.addEventListener('click', function() {
@@ -2683,10 +2655,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('btnOpenVncNewTab').style.display = 'none';
             document.getElementById('vncStatusBadge').className = 'badge bg-warning text-dark';
             document.getElementById('vncStatusBadge').textContent = 'Đang gửi yêu cầu...';
-            if (btnBypassAcceptTest) {
-                btnBypassAcceptTest.disabled = false;
-                btnBypassAcceptTest.innerHTML = '<i class="bi bi-play-circle-fill me-1"></i> [Test 1 Máy] Bấm Vào Đây Để Tự Chấp Nhận & Bắt Đầu Ngay';
-            }
 
             // Step 1: Send request to PHP
             fetch('<?= $baseUrl ?>/remote-support/vnc/request', {
@@ -2695,7 +2663,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     ticket_id: <?= (int)$ticket['id'] ?>,
                     ws_url: 'http://127.0.0.1:6080/vnc_lite.html',
-                    session_pass: '123456',
+                    session_pass: '123456', target_ip: (document.getElementById('vncTargetIp') ? document.getElementById('vncTargetIp').value.trim() : ''),
                     _csrf_token: '<?= \App\Core\Session::csrfToken() ?>'
                 })
             })
@@ -2707,7 +2675,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     // Step 2: Poll session status every 2 seconds
                     clearInterval(vncPollTimer);
-                    vncPollTimer = setInterval(pollVncSessionStatus, 2000);
+                    vncPollTimer = setInterval(pollVncSessionStatus, 1000);
                 } else {
                     alert(data.message || 'Lỗi gửi yêu cầu');
                 }
@@ -2739,7 +2707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (frame.src === 'about:blank' || !frame.src.includes('6080')) {
                         frame.src = data.iframe_url;
                     }
-                } else if (data.status === 'rejected') {
+                } else if (data.status === 'expired') { clearInterval(vncPollTimer); document.getElementById('vncStatusBadge').className = 'badge bg-secondary'; document.getElementById('vncStatusBadge').textContent = 'Het han 30 giay - da tu huy'; alert('Yeu cau remote da het han 30 giay vi user chua chap nhan.'); bootstrap.Modal.getInstance(document.getElementById('itNovncModal')).hide(); } else if (data.status === 'rejected') {
                     clearInterval(vncPollTimer);
                     document.getElementById('vncStatusBadge').className = 'badge bg-danger';
                     document.getElementById('vncStatusBadge').textContent = 'Người dùng từ chối';

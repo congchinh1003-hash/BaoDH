@@ -70,7 +70,9 @@ class RemoteSession extends Model
                     `enduser_id` INT NOT NULL,
                     `ws_url` VARCHAR(255) NOT NULL DEFAULT 'ws://127.0.0.1:6080',
                     `session_pass` VARCHAR(50) NOT NULL DEFAULT '123456',
-                    `status` ENUM('pending', 'accepted', 'rejected', 'ended') DEFAULT 'pending',
+                    `status` ENUM('pending', 'accepted', 'rejected', 'ended', 'expired') DEFAULT 'pending',
+                    `expires_at` DATETIME NULL,
+                    `responded_at` DATETIME NULL,
                     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     INDEX `idx_rs_ticket` (`ticket_id`),
                     INDEX `idx_rs_status` (`status`),
@@ -340,13 +342,15 @@ class RemoteSession extends Model
 
     public function createVncRequest(int $ticketId, int $itId, int $enduserId, string $wsUrl = 'http://127.0.0.1:6080/vnc_lite.html', string $pass = '123456'): int
     {
+        try { $this->db->exec("ALTER TABLE remote_sessions ADD COLUMN expires_at DATETIME NULL, ADD COLUMN responded_at DATETIME NULL"); } catch (\Throwable $e) {}
+        try { $this->db->exec("ALTER TABLE remote_sessions MODIFY COLUMN status ENUM('pending','accepted','rejected','ended','expired') DEFAULT 'pending'"); } catch (\Throwable $e) {}
         // Cancel existing pending requests for this ticket
-        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'ended' WHERE ticket_id = :tid AND status = 'pending'");
+        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'expired' WHERE ticket_id = :tid AND status = 'pending'");
         $stmt->execute(['tid' => $ticketId]);
 
         $stmt = $this->db->prepare("
-            INSERT INTO remote_sessions (ticket_id, it_id, enduser_id, ws_url, session_pass, status)
-            VALUES (:ticket_id, :it_id, :enduser_id, :ws_url, :session_pass, 'pending')
+            INSERT INTO remote_sessions (ticket_id, it_id, enduser_id, ws_url, session_pass, status, expires_at)
+            VALUES (:ticket_id, :it_id, :enduser_id, :ws_url, :session_pass, 'pending', DATE_ADD(NOW(), INTERVAL 30 SECOND))
         ");
         $stmt->execute([
             'ticket_id'    => $ticketId,
@@ -361,11 +365,11 @@ class RemoteSession extends Model
     public function getPendingVncRequestForUser(int $userId): ?array
     {
         $stmt = $this->db->prepare("
-            SELECT rs.*, u.full_name as it_name, t.title as ticket_title, t.ticket_code
+            SELECT rs.*, GREATEST(0, TIMESTAMPDIFF(SECOND, NOW(), rs.expires_at)) AS seconds_remaining, u.full_name as it_name, t.title as ticket_title, t.ticket_code
             FROM remote_sessions rs
             JOIN users u ON rs.it_id = u.id
             JOIN tickets t ON rs.ticket_id = t.id
-            WHERE rs.enduser_id = :uid AND rs.status = 'pending'
+            WHERE rs.enduser_id = :uid AND rs.status = 'pending' AND (rs.expires_at IS NULL OR rs.expires_at > NOW())
             ORDER BY rs.id DESC LIMIT 1
         ");
         $stmt->execute(['uid' => $userId]);
@@ -393,9 +397,22 @@ class RemoteSession extends Model
         return null;
     }
 
+    public function expireStaleVncRequests(): void
+    {
+        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'expired' WHERE status = 'pending' AND expires_at IS NOT NULL AND expires_at <= NOW()");
+        $stmt->execute();
+    }
+
+    public function expireVncSessionIfNeeded(int $id): bool
+    {
+        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'expired' WHERE id = :id AND status = 'pending' AND expires_at IS NOT NULL AND expires_at <= NOW()");
+        $stmt->execute(['id' => $id]);
+        return $stmt->rowCount() > 0;
+    }
+
     public function updateVncStatus(int $id, string $status): bool
     {
-        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = :status WHERE id = :id");
+        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = :status, responded_at = IF(:status IN ('accepted','rejected'), NOW(), responded_at) WHERE id = :id");
         return $stmt->execute(['status' => $status, 'id' => $id]);
     }
 

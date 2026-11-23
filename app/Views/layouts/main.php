@@ -935,13 +935,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // noVNC / TightVNC REALTIME REQUEST POLLER (REQUEST -> ACCEPT -> CONTROL)
     // =========================================================================
     let currentVncSessionId = null;
+    let vncCountdownTimer = null;
+    let vncShownSessionId = null;
+    function stopVncCountdown() { if (vncCountdownTimer) { clearInterval(vncCountdownTimer); vncCountdownTimer = null; } }
+    function hideVncModal() { stopVncCountdown(); vncShownSessionId = null; currentVncSessionId = null; const el = document.getElementById('novncIncomingModal'); if (el) { const m = bootstrap.Modal.getInstance(el); if (m) m.hide(); } }
+    function startVncCountdown(req) { stopVncCountdown(); let remain = 30; if (req.seconds_remaining != null) { remain = parseInt(req.seconds_remaining, 10); } if (req.expires_at) { const left = Math.ceil((new Date(req.expires_at.replace(' ', 'T')) - Date.now()) / 1000); if (!isNaN(left)) { remain = left; } } if (isNaN(remain) || remain < 0) { remain = 0; } const badge = document.getElementById('novncCountdown'); const tick = function() { if (badge) { badge.textContent = remain + 's'; } if (remain <= 0) { hideVncModal(); return; } remain--; }; tick(); vncCountdownTimer = setInterval(tick, 1000); }
     setInterval(function() {
         fetch(baseUrl + '/remote-support/vnc/check-request')
             .then(res => res.json())
             .then(data => {
                 if (data && data.has_request && data.request) {
                     const req = data.request;
-                    currentVncSessionId = req.id;
+                    currentVncSessionId = req.id; if (vncShownSessionId !== req.id) { vncShownSessionId = req.id; startVncCountdown(req); }
                     const reqText = document.getElementById('novncRequesterText');
                     const tickText = document.getElementById('novncTicketText');
                     if (reqText) {
@@ -960,7 +965,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(() => {});
-    }, 2500);
+    }, 1000);
 
     const btnAcceptNovnc = document.getElementById('btnAcceptNovnc');
     const btnRejectNovnc = document.getElementById('btnRejectNovnc');
@@ -972,7 +977,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
                 body: JSON.stringify({ session_id: currentVncSessionId, action: 'accept', _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
             }).then(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
+                stopVncCountdown(); vncShownSessionId = null; const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
                 if (modal) modal.hide();
                 showVncActiveBar(currentVncSessionId);
             });
@@ -986,7 +991,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
                 body: JSON.stringify({ session_id: currentVncSessionId, action: 'reject', _csrf_token: '<?= \App\Core\Session::csrfToken() ?>' })
             }).then(() => {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
+                stopVncCountdown(); vncShownSessionId = null; const modal = bootstrap.Modal.getInstance(document.getElementById('novncIncomingModal'));
                 if (modal) modal.hide();
             });
         });
@@ -1044,6 +1049,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
             <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                <span id="novncCountdown" class="badge bg-warning text-dark align-self-center fw-bold">30s</span>
                 <button type="button" class="btn btn-outline-secondary px-4 fw-bold" id="btnRejectNovnc">
                     <i class="bi bi-x-circle me-1"></i> Từ Chối
                 </button>

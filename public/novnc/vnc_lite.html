@@ -184,7 +184,10 @@
 
         // Set parameters that can be changed on an active connection
         rfb.viewOnly = readQueryBoolean('view_only', false);
-        rfb.scaleViewport = readQueryBoolean('scale', false);
+        const resizeParam = readQueryVariable('resize', '');
+        rfb.scaleViewport = readQueryBoolean('scale', true) || (resizeParam === 'scale');
+        rfb.showDotCursor = readQueryBoolean('cursor', true);
+        rfb.focusOnClick = true;
     </script>
 </head>
 
