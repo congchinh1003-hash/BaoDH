@@ -387,4 +387,30 @@ class MobileController extends Controller
         }
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Download Android APK
+     */
+    public function downloadApk(Request $request, Response $response): void
+    {
+        $apkPath = dirname(__DIR__, 2) . '/public/TaskFlow-v1.0.apk';
+        if (!file_exists($apkPath)) {
+            $apkPath = dirname(__DIR__, 2) . '/TaskFlow-v1.0.apk';
+        }
+
+        if (!file_exists($apkPath)) {
+            $response->status(404)->json(['success' => false, 'message' => 'File APK chưa sẵn sàng']);
+            return;
+        }
+
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/vnd.android.package-archive');
+        header('Content-Disposition: attachment; filename="TaskFlow-v1.0.apk"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($apkPath));
+        readfile($apkPath);
+        exit;
+    }
 }

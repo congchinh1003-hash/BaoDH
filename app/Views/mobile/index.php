@@ -479,6 +479,7 @@
                         <div class="small text-muted font-monospace"><?= htmlspecialchars($user['username'] ?? '') ?></div>
                         <span class="badge bg-primary-subtle text-primary mt-1"><?= htmlspecialchars($user['role'] ?? 'USER') ?></span>
                     </li>
+                    <li><a class="dropdown-item py-2" href="<?= $baseUrl ?? '' ?>/TaskFlow-v1.0.apk" download><i class="bi bi-android2 me-2 text-success"></i> Tải Cài Đặt APK Android</a></li>
                     <li><a class="dropdown-item py-2" href="<?= $baseUrl ?? '' ?>/dashboard"><i class="bi bi-display me-2 text-primary"></i> Về Giao Diện Web PC</a></li>
                     <li><hr class="dropdown-divider my-1"></li>
                     <li><a class="dropdown-item py-2 text-danger" href="<?= $baseUrl ?? '' ?>/logout"><i class="bi bi-box-arrow-right me-2"></i> Đăng Xuất</a></li>
