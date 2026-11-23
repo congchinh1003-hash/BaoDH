@@ -307,6 +307,7 @@ $router->post('/mobile/api/tickets/create', [MobileController::class, 'apiCreate
 $router->get('/mobile/api/approvals', [MobileController::class, 'apiApprovals'], [AuthMiddleware::class]);
 $router->post('/mobile/api/approvals/decide', [MobileController::class, 'apiDecideApproval'], [AuthMiddleware::class]);
 $router->get('/mobile/api/asset-scan/{code}', [MobileController::class, 'apiScanAsset'], [AuthMiddleware::class]);
+$router->get('/TaskFlow-v1.2.apk', [MobileController::class, 'downloadApk']);
 $router->get('/TaskFlow-v1.1.apk', [MobileController::class, 'downloadApk']);
 $router->get('/TaskFlow-v1.0.apk', [MobileController::class, 'downloadApk']);
 $router->get('/mobile/download-apk', [MobileController::class, 'downloadApk']);

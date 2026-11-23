@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Custom User-Agent for native detection
         String defaultUa = settings.getUserAgentString();
-        settings.setUserAgentString(defaultUa + " TaskFlowMobileApp/1.1 (Android; Mobile)");
+        settings.setUserAgentString(defaultUa + " TaskFlowMobileApp/1.2 (Android; Mobile)");
 
         // Enable Cookies
         CookieManager cookieManager = CookieManager.getInstance();
