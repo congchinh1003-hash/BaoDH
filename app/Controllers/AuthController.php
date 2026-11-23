@@ -73,11 +73,18 @@ class AuthController extends Controller
         Auth::login($user, $roles);
         $this->setFlash('success', "Chào mừng " . htmlspecialchars($user['full_name']) . " đã đăng nhập thành công.");
 
-        // Check if there is a pending return URL ONLY from an Asset QR code scan (/asset/{code})
+        // Check if there is a pending return URL
         $returnUrl = Session::get('return_url');
         Session::remove('return_url');
-        if ($returnUrl && is_string($returnUrl) && str_starts_with($returnUrl, '/asset/')) {
+        if ($returnUrl && is_string($returnUrl)) {
             $response->redirect($returnUrl);
+            return;
+        }
+
+        // If inside Mobile App (User-Agent has TaskFlowMobileApp or Mobile) -> Always redirect to /mobile
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        if (str_contains($ua, 'TaskFlowMobileApp')) {
+            $response->redirect('/mobile');
             return;
         }
 

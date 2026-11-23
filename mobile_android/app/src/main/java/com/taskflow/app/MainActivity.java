@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Custom User-Agent for native detection
         String defaultUa = settings.getUserAgentString();
-        settings.setUserAgentString(defaultUa + " TaskFlowMobileApp/1.2 (Android; Mobile)");
+        settings.setUserAgentString(defaultUa + " TaskFlowMobileApp/1.3 (Android; Mobile)");
 
         // Enable Cookies
         CookieManager cookieManager = CookieManager.getInstance();
@@ -203,15 +203,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        swipeRefresh.setColorSchemeResources(R.color.accent, R.color.primary);
-        swipeRefresh.setOnRefreshListener(() -> {
-            if (layoutError.getVisibility() == View.VISIBLE) {
-                layoutError.setVisibility(View.GONE);
-                webView.loadUrl(TARGET_URL);
-            } else {
-                webView.reload();
-            }
-        });
+        // Disable touch interception so scrolling up/down never triggers accidental reload
+        swipeRefresh.setEnabled(false);
 
         btnRetry.setOnClickListener(v -> {
             layoutError.setVisibility(View.GONE);
