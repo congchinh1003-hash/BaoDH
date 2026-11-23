@@ -135,6 +135,9 @@ public class MainActivity extends AppCompatActivity {
                 super.onPageFinished(view, url);
                 progressBar.setVisibility(View.GONE);
                 swipeRefresh.setRefreshing(false);
+                if (url != null && url.contains("/mobile")) {
+                    view.clearHistory();
+                }
             }
 
             @Override
@@ -261,8 +264,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private long backPressedTime = 0;
+
     @Override
     public void onBackPressed() {
+        String currentUrl = webView.getUrl();
+        if (currentUrl != null && currentUrl.contains("/mobile")) {
+            webView.evaluateJavascript("if (typeof handleAppBack === 'function') { handleAppBack(); } else { false; }", value -> {
+                if (!"true".equals(value)) {
+                    if (backPressedTime + 2000 > System.currentTimeMillis()) {
+                        finish();
+                    } else {
+                        Toast.makeText(MainActivity.this, "Vuốt lại lần nữa để thoát ứng dụng", Toast.LENGTH_SHORT).show();
+                        backPressedTime = System.currentTimeMillis();
+                    }
+                }
+            });
+            return;
+        }
+
         if (webView.canGoBack()) {
             webView.goBack();
         } else {

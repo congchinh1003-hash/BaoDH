@@ -1420,6 +1420,27 @@
                 });
         }
 
+        function extractAssetCode(raw) {
+            if (!raw) return '';
+            let str = String(raw).trim();
+            try { str = decodeURIComponent(str); } catch (e) {}
+
+            // Match /asset/AST-MON-002 or /assets/AST-MON-002
+            const match = str.match(/(?:asset|assets)\/([A-Za-z0-9\-_]+)/i);
+            if (match && match[1]) {
+                return match[1];
+            }
+
+            // If it's a full URL or contains slashes, extract last segment
+            if (str.includes('/')) {
+                const parts = str.split('/').map(p => p.trim()).filter(p => p.length > 0);
+                if (parts.length > 0) {
+                    return parts[parts.length - 1];
+                }
+            }
+            return str;
+        }
+
         function lookupManualAsset() {
             const code = document.getElementById('manualAssetCodeInput').value.trim();
             if (!code) {
@@ -1429,25 +1450,35 @@
             lookupAssetByCode(code);
         }
 
-        function lookupAssetByCode(code) {
+        function lookupAssetByCode(rawCode) {
+            const cleanCode = extractAssetCode(rawCode);
             const modalEl = document.getElementById('modalAssetDetail');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             const body = document.getElementById('assetDetailBody');
 
-            document.getElementById('assetDetailCode').textContent = code;
+            // Display ONLY clean asset code, never full URL
+            document.getElementById('assetDetailCode').textContent = cleanCode;
             document.getElementById('assetDetailName').textContent = 'Đang tra cứu thiết bị...';
             body.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div><div class="small mt-2">Đang tải thông tin...</div></div>`;
             modal.show();
 
-            fetch(`${BASE_URL}/mobile/api/asset-scan/${encodeURIComponent(code)}`)
-                .then(res => res.json())
+            fetch(`${BASE_URL}/mobile/api/asset-scan?code=${encodeURIComponent(cleanCode)}`)
+                .then(res => {
+                    return res.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            throw new Error('Máy chủ phản hồi định dạng không hợp lệ.');
+                        }
+                    });
+                })
                 .then(data => {
                     if (!data.success || !data.asset) {
                         body.innerHTML = `
                             <div class="alert alert-warning small text-center p-3 rounded-4">
                                 <i class="bi bi-question-circle fs-3 d-block mb-2 text-warning"></i>
                                 <strong>Không tìm thấy thiết bị!</strong><br>
-                                Mã QR: <span class="font-monospace">${escapeHtml(code)}</span> không tồn tại trong hệ thống.
+                                Mã: <span class="font-monospace fw-bold">${escapeHtml(cleanCode)}</span> không tồn tại trong hệ thống.
                             </div>
                         `;
                         return;
@@ -1548,6 +1579,38 @@
                 return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m];
             });
         }
+
+        // Mobile Back Gesture Navigation Management
+        function handleAppBack() {
+            // Check if any modal is currently visible
+            const openModals = document.querySelectorAll('.modal.show');
+            if (openModals.length > 0) {
+                openModals.forEach(m => {
+                    const instance = bootstrap.Modal.getInstance(m);
+                    if (instance) instance.hide();
+                });
+                return true;
+            }
+
+            // If user is on scanner, approvals, or profile tab, go back to tickets hub
+            if (currentScreen !== 'screen-tickets') {
+                switchTab('screen-tickets');
+                return true;
+            }
+
+            return false;
+        }
+
+        window.addEventListener('popstate', function (e) {
+            if (handleAppBack()) {
+                history.pushState(null, '', location.href);
+            }
+        });
+
+        // Initialize history guard so swipe back doesn't go to old desktop site
+        try {
+            history.pushState(null, '', location.href);
+        } catch (e) {}
     </script>
 </body>
 </html>

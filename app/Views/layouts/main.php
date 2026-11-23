@@ -4,6 +4,12 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Models\Project;
 
+// If inside TaskFlow Mobile App, never render desktop layout
+if (str_contains($_SERVER['HTTP_USER_AGENT'] ?? '', 'TaskFlowMobileApp')) {
+    header('Location: ' . (Response::baseUrl() ?? '') . '/mobile');
+    exit;
+}
+
 /**
  * @var string $content
  * @var string|null $pageTitle

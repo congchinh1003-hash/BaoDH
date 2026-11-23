@@ -295,12 +295,24 @@ class MobileController extends Controller
     /**
      * API: Scan Asset QR code and return equipment info
      */
-    public function apiScanAsset(Request $request, Response $response, string $code): void
+    public function apiScanAsset(Request $request, Response $response, string $code = ''): void
     {
+        if (empty($code)) {
+            $code = (string)$request->input('code', '');
+        }
+
         $cleanCode = trim(urldecode($code));
-        // If code is a URL (e.g. https://.../asset/AST-000001 or .../assets/5)
+        // If code is a URL (e.g. https://.../asset/AST-MON-002 or .../assets/5)
         if (preg_match('/asset(?:s)?\/([A-Za-z0-9\-_]+)/i', $cleanCode, $matches)) {
             $cleanCode = $matches[1];
+        }
+
+        // If it still contains slashes, extract last segment
+        if (str_contains($cleanCode, '/')) {
+            $parts = array_filter(explode('/', $cleanCode));
+            if (!empty($parts)) {
+                $cleanCode = end($parts);
+            }
         }
 
         $asset = null;
@@ -313,7 +325,7 @@ class MobileController extends Controller
         if (!$asset) {
             $response->json([
                 'success' => false,
-                'message' => "Không tìm thấy thiết bị với mã quét được: '{$cleanCode}'"
+                'message' => "Không tìm thấy thiết bị với mã: '{$cleanCode}'"
             ], 404);
             return;
         }
