@@ -86,7 +86,7 @@ class MobileController extends Controller
 
         $query = "
             SELECT t.id, t.ticket_code, t.title, t.status, t.impact, t.urgency, t.created_at,
-                   c.name as category_name, c.color as category_color,
+                   c.name as category_name,
                    p.name as priority_name, p.color as priority_color, p.level as priority_level,
                    u.full_name as requester_name,
                    a.full_name as assignee_name
@@ -371,7 +371,7 @@ class MobileController extends Controller
     {
         $query = "
             SELECT t.id, t.ticket_code, t.title, t.status, t.created_at,
-                   c.name as category_name, c.color as category_color,
+                   c.name as category_name,
                    p.name as priority_name, p.color as priority_color, p.level as priority_level
             FROM tickets t
             LEFT JOIN ticket_categories c ON t.category_id = c.id
