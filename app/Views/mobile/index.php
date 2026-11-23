@@ -905,14 +905,22 @@
             <div class="modal-content shadow-lg">
                 <div class="sheet-drag-pill"></div>
                 <div class="modal-header border-0 pt-0 px-4 pb-2">
-                    <div>
-                        <span class="ticket-code-tag" id="detailTicketCode">#CODE</span>
-                        <h6 class="modal-title fw-bold text-dark mt-1" id="detailTicketTitle">Tiêu Đề Phiếu</h6>
+                    <div class="w-100 pe-2">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="ticket-code-tag" id="detailTicketCode">#CODE</span>
+                            <span id="detailTicketStatus"></span>
+                        </div>
+                        <h6 class="modal-title fw-bold text-dark mt-1 mb-0" id="detailTicketTitle" style="font-size:1.02rem; line-height:1.35;">Tiêu Đề Phiếu</h6>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close align-self-start" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-4 pt-1" id="detailTicketBody">
+                <div class="modal-body px-4 pt-1" id="detailTicketBody" style="max-height: 72vh; overflow-y: auto;">
                     <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+                </div>
+                <div class="modal-footer border-0 px-4 py-3 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary w-100 fw-bold rounded-pill py-2" data-bs-dismiss="modal" style="font-size:0.88rem;">
+                        <i class="bi bi-x-circle me-1"></i> Đóng
+                    </button>
                 </div>
             </div>
         </div>
@@ -985,11 +993,28 @@
         let searchTimer = null;
         let html5QrCode = null;
         let isScannerRunning = false;
+        let isScanLocked = false;
         let currentCameraFacing = "environment";
         let lastScannedAsset = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadTickets();
+
+            // When asset popup is closed, resume scanner if still on scanner tab
+            const assetModal = document.getElementById('modalAssetDetail');
+            if (assetModal) {
+                assetModal.addEventListener('hidden.bs.modal', () => {
+                    resumeScannerIfActive();
+                });
+            }
+
+            // When ticket create modal is closed, resume scanner if on scanner tab
+            const createModal = document.getElementById('modalCreateTicket');
+            if (createModal) {
+                createModal.addEventListener('hidden.bs.modal', () => {
+                    resumeScannerIfActive();
+                });
+            }
         });
 
         // =========================================================================
@@ -1121,53 +1146,136 @@
 
             document.getElementById('detailTicketCode').textContent = `Đang tải...`;
             document.getElementById('detailTicketTitle').textContent = `Chi tiết yêu cầu #${ticketId}`;
-            body.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>`;
+            const statusEl = document.getElementById('detailTicketStatus');
+            if (statusEl) statusEl.innerHTML = '';
+            body.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div><div class="small text-muted mt-2">Đang tải thông tin phiếu...</div></div>`;
             modal.show();
 
             fetch(`${BASE_URL}/mobile/api/tickets/${ticketId}`)
-                .then(res => res.json())
+                .then(res => {
+                    return res.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            throw new Error('Máy chủ phản hồi không đúng định dạng JSON.');
+                        }
+                    });
+                })
                 .then(data => {
                     if (!data.success || !data.ticket) {
-                        body.innerHTML = `<div class="alert alert-danger small">Không thể tải thông tin phiếu.</div>`;
+                        body.innerHTML = `<div class="alert alert-warning small rounded-3 p-3 text-center"><i class="bi bi-info-circle me-1"></i> ${escapeHtml(data.message || 'Không thể tải thông tin phiếu.')}</div>`;
                         return;
                     }
                     const tk = data.ticket;
                     document.getElementById('detailTicketCode').textContent = `#${tk.ticket_code}`;
                     document.getElementById('detailTicketTitle').textContent = tk.title;
+                    if (statusEl) {
+                        statusEl.innerHTML = getStatusBadgeHtml(tk.status);
+                    }
 
+                    // Checklist
                     let checklistHtml = '';
                     if (data.checklists && data.checklists.length > 0) {
-                        checklistHtml = `<div class="mt-3"><div class="fw-bold small text-dark mb-2">Đầu việc kỹ thuật (Checklist):</div>`;
+                        checklistHtml = `
+                            <div class="mt-3">
+                                <div class="fw-bold small text-dark mb-2 d-flex align-items-center gap-1">
+                                    <i class="bi bi-check2-square text-primary"></i> Tiến độ công việc (Checklist):
+                                </div>
+                                <div class="bg-light rounded-3 p-2 border">
+                        `;
                         data.checklists.forEach(c => {
+                            const isDone = c.is_completed == 1 || c.is_done == 1;
                             checklistHtml += `
-                                <div class="d-flex align-items-center gap-2 small py-1">
-                                    <i class="bi ${c.is_done ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'}"></i>
-                                    <span class="${c.is_done ? 'text-decoration-line-through text-muted' : ''}">${escapeHtml(c.item_text)}</span>
+                                <div class="d-flex align-items-start gap-2 small py-1 px-1">
+                                    <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'} mt-1"></i>
+                                    <span class="${isDone ? 'text-decoration-line-through text-muted' : 'text-dark'}">${escapeHtml(c.item_text)}</span>
                                 </div>
                             `;
                         });
-                        checklistHtml += `</div>`;
+                        checklistHtml += `</div></div>`;
                     }
 
+                    // Comments / History
+                    let commentsHtml = '';
+                    if (data.comments && data.comments.length > 0) {
+                        commentsHtml = `
+                            <div class="mt-3">
+                                <div class="fw-bold small text-dark mb-2 d-flex align-items-center gap-1">
+                                    <i class="bi bi-chat-left-text text-primary"></i> Lịch sử phản hồi (${data.comments.length}):
+                                </div>
+                        `;
+                        data.comments.forEach(cm => {
+                            commentsHtml += `
+                                <div class="bg-white border rounded-3 p-2 mb-2 shadow-none">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <strong class="text-dark" style="font-size:0.8rem;">${escapeHtml(cm.full_name || 'Người dùng')}</strong>
+                                        <span class="text-muted" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>${formatDate(cm.created_at)}</span>
+                                    </div>
+                                    <div class="text-secondary small" style="white-space:pre-wrap; line-height:1.4;">${escapeHtml(cm.content)}</div>
+                                </div>
+                            `;
+                        });
+                        commentsHtml += `</div>`;
+                    }
+
+                    const priorityColor = tk.priority_color || '#3b82f6';
+                    const assetInfo = tk.asset_code ? `${tk.asset_code} - ${tk.asset_name || ''}` : 'Không đính kèm';
+
                     body.innerHTML = `
-                        <div class="mb-3 d-flex justify-content-between align-items-center">
-                            ${getStatusBadgeHtml(tk.status)}
-                            <span class="text-muted small"><i class="bi bi-clock me-1"></i>${formatDate(tk.created_at)}</span>
+                        <!-- Priority & Time bar -->
+                        <div class="d-flex align-items-center justify-content-between py-2 border-bottom mb-3" style="font-size:0.8rem;">
+                            <span class="fw-bold" style="color: ${priorityColor};">
+                                ● Mức độ: ${escapeHtml(tk.priority_name || 'Bình thường')}
+                            </span>
+                            <span class="text-muted">
+                                <i class="bi bi-calendar3 me-1"></i>${formatDate(tk.created_at)}
+                            </span>
                         </div>
-                        <div class="p-3 bg-light rounded-3 mb-3 text-dark small" style="white-space: pre-wrap; line-height:1.5;">
-                            ${escapeHtml(tk.description || 'Không có mô tả chi tiết.')}
+
+                        <!-- Info grid -->
+                        <div class="bg-white border rounded-3 p-3 mb-3 shadow-none">
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <span class="text-muted" style="font-size:0.75rem;">Người gửi:</span><br>
+                                    <strong class="text-dark">${escapeHtml(tk.requester_name || 'N/A')}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted" style="font-size:0.75rem;">Kỹ thuật viên:</span><br>
+                                    <strong class="text-primary">${escapeHtml(tk.assignee_name || 'Chưa tiếp nhận')}</strong>
+                                </div>
+                                <div class="col-6 mt-2">
+                                    <span class="text-muted" style="font-size:0.75rem;">Danh mục:</span><br>
+                                    <strong class="text-dark">${escapeHtml(tk.category_name || 'Sự cố chung')}</strong>
+                                </div>
+                                <div class="col-6 mt-2">
+                                    <span class="text-muted" style="font-size:0.75rem;">Vị trí / Phòng:</span><br>
+                                    <strong class="text-dark">${escapeHtml(tk.location || tk.requester_department || 'Văn phòng')}</strong>
+                                </div>
+                                ${tk.asset_code ? `
+                                <div class="col-12 mt-2 pt-2 border-top">
+                                    <span class="text-muted" style="font-size:0.75rem;">Thiết bị liên quan:</span><br>
+                                    <strong class="text-dark font-monospace">${escapeHtml(assetInfo)}</strong>
+                                </div>
+                                ` : ''}
+                            </div>
                         </div>
-                        <div class="row g-2 mb-2 text-muted small bg-white border rounded-3 p-3">
-                            <div class="col-6"><strong>Người yêu cầu:</strong><br>${escapeHtml(tk.requester_name || 'N/A')}</div>
-                            <div class="col-6"><strong>Kỹ thuật viên:</strong><br>${escapeHtml(tk.assignee_name || 'Chưa phân công')}</div>
-                            <div class="col-6 mt-2"><strong>Mức ưu tiên:</strong><br>${escapeHtml(tk.priority_name || 'Bình thường')}</div>
-                            <div class="col-6 mt-2"><strong>Vị trí:</strong><br>${escapeHtml(tk.location || 'Văn phòng')}</div>
+
+                        <!-- Description -->
+                        <div class="mb-2">
+                            <div class="fw-bold small text-dark mb-1 d-flex align-items-center gap-1">
+                                <i class="bi bi-file-earmark-text text-primary"></i> Nội dung mô tả sự cố:
+                            </div>
+                            <div class="p-3 bg-light rounded-3 text-dark small" style="white-space: pre-wrap; line-height: 1.5; border: 1px solid #f1f5f9;">
+                                ${escapeHtml(tk.description || 'Không có mô tả chi tiết.')}
+                            </div>
                         </div>
+
                         ${checklistHtml}
+                        ${commentsHtml}
                     `;
                 })
                 .catch(err => {
-                    body.innerHTML = `<div class="alert alert-danger small">Lỗi kết nối: ${err.message}</div>`;
+                    body.innerHTML = `<div class="alert alert-danger small rounded-3 p-3"><i class="bi bi-exclamation-triangle-fill me-1"></i> Lỗi kết nối: ${escapeHtml(err.message)}</div>`;
                 });
         }
 
@@ -1351,6 +1459,7 @@
         // =========================================================================
         function startScanner() {
             if (isScannerRunning) return;
+            isScanLocked = false;
 
             if (typeof Html5Qrcode === 'undefined') {
                 alert('Thư viện quét mã đang tải, vui lòng thử lại sau vài giây.');
@@ -1368,6 +1477,7 @@
                     onQrScanError
                 ).then(() => {
                     isScannerRunning = true;
+                    isScanLocked = false;
                 }).catch(err => {
                     console.warn("Camera start error:", err);
                 });
@@ -1377,6 +1487,7 @@
         }
 
         function stopScanner() {
+            isScanLocked = false;
             if (html5QrCode && isScannerRunning) {
                 html5QrCode.stop().then(() => {
                     isScannerRunning = false;
@@ -1385,15 +1496,42 @@
         }
 
         function switchCamera() {
+            isScanLocked = false;
             stopScanner();
             currentCameraFacing = currentCameraFacing === "environment" ? "user" : "environment";
             setTimeout(startScanner, 250);
         }
 
         function onQrCodeScanned(decodedText, decodedResult) {
+            // Guard: Scan only once!
+            if (isScanLocked) return;
+            isScanLocked = true;
+
+            // Pause camera stream immediately so it stops scanning while popup modal is open
+            if (html5QrCode && isScannerRunning) {
+                try {
+                    html5QrCode.pause(true);
+                } catch (e) {
+                    console.warn("Could not pause scanner:", e);
+                }
+            }
+
             playSuccessBeep();
             if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
             lookupAssetByCode(decodedText);
+        }
+
+        function resumeScannerIfActive() {
+            isScanLocked = false;
+            if (currentScreen === 'screen-scanner' && html5QrCode && isScannerRunning) {
+                try {
+                    html5QrCode.resume();
+                } catch (e) {
+                    console.warn("Resume scan failed, restarting camera:", e);
+                    stopScanner();
+                    setTimeout(startScanner, 250);
+                }
+            }
         }
 
         function onQrScanError(errorMessage) {
@@ -1492,8 +1630,11 @@
                     const btnReport = document.getElementById('btnReportAssetIncident');
                     if (btnReport) {
                         btnReport.onclick = function() {
+                            isScanLocked = true;
                             modal.hide();
-                            openCreateTicketModal('INCIDENT', a.id);
+                            setTimeout(() => {
+                                openCreateTicketModal('INCIDENT', a.id);
+                            }, 250);
                         };
                     }
 

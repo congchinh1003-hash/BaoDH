@@ -134,38 +134,56 @@ class MobileController extends Controller
      */
     public function apiTicketDetail(Request $request, Response $response, string $id): void
     {
-        $ticketId = (int)$id;
-        $ticket = $this->ticketModel->findById($ticketId);
+        try {
+            $ticketId = (int)$id;
+            $ticket = $this->ticketModel->findById($ticketId);
 
-        if (!$ticket) {
-            $response->json(['success' => false, 'message' => 'Không tìm thấy phiếu yêu cầu.'], 404);
-            return;
+            if (!$ticket) {
+                $response->json(['success' => false, 'message' => 'Không tìm thấy phiếu yêu cầu.'], 404);
+                return;
+            }
+
+            // Get comments safely without referencing non-existent u.role
+            $comments = [];
+            try {
+                $commentStmt = $this->db->prepare("
+                    SELECT tc.id, tc.ticket_id, tc.user_id, tc.content, tc.is_internal, tc.created_at,
+                           u.full_name, u.avatar
+                    FROM ticket_comments tc
+                    LEFT JOIN users u ON tc.user_id = u.id
+                    WHERE tc.ticket_id = :tid
+                    ORDER BY tc.id ASC
+                ");
+                $commentStmt->execute(['tid' => $ticketId]);
+                $comments = $commentStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            } catch (\Throwable $e) {
+                $comments = [];
+            }
+
+            // Get checklists safely
+            $checklists = [];
+            try {
+                $chkStmt = $this->db->prepare("
+                    SELECT id, ticket_id, item_text, is_completed, sort_order, created_at
+                    FROM ticket_checklists 
+                    WHERE ticket_id = :tid 
+                    ORDER BY sort_order ASC, id ASC
+                ");
+                $chkStmt->execute(['tid' => $ticketId]);
+                $checklists = $chkStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            } catch (\Throwable $e) {
+                $checklists = [];
+            }
+
+            $response->json([
+                'success'    => true,
+                'ticket'     => $ticket,
+                'comments'   => $comments,
+                'checklists' => $checklists
+            ]);
+        } catch (\Throwable $e) {
+            $response->json(['success' => false, 'message' => 'Lỗi xử lý: ' . $e->getMessage()], 500);
         }
-
-        // Get comments
-        $commentStmt = $this->db->prepare("
-            SELECT tc.*, u.full_name, u.avatar, u.role
-            FROM ticket_comments tc
-            JOIN users u ON tc.user_id = u.id
-            WHERE tc.ticket_id = :tid
-            ORDER BY tc.id ASC
-        ");
-        $commentStmt->execute(['tid' => $ticketId]);
-        $comments = $commentStmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        // Get checklists
-        $chkStmt = $this->db->prepare("
-            SELECT * FROM ticket_checklists WHERE ticket_id = :tid ORDER BY sort_order ASC, id ASC
-        ");
-        $chkStmt->execute(['tid' => $ticketId]);
-        $checklists = $chkStmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        $response->json([
-            'success'    => true,
-            'ticket'     => $ticket,
-            'comments'   => $comments,
-            'checklists' => $checklists
-        ]);
     }
 
     /**
