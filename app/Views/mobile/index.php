@@ -6,9 +6,9 @@
     <title><?= htmlspecialchars($pageTitle ?? 'TaskFlow Mobile') ?></title>
     
     <!-- PWA & Mobile Web App meta -->
-    <meta name="theme-color" content="#1e293b">
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" type="image/png" href="<?= $baseUrl ?? '' ?>/favicon.ico">
     
     <!-- Google Fonts & Bootstrap 5 & Bootstrap Icons -->
@@ -28,18 +28,20 @@
 
     <style>
         :root {
-            --app-primary: #3b82f6;
-            --app-primary-dark: #1d4ed8;
-            --app-primary-light: #eff6ff;
-            --app-accent: #6366f1;
-            --app-bg: #f8fafc;
-            --app-card: #ffffff;
-            --app-text: #0f172a;
-            --app-muted: #64748b;
-            --app-border: #e2e8f0;
-            --app-success: #10b981;
-            --app-warning: #f59e0b;
-            --app-danger: #ef4444;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #eff6ff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --gray-700: #334155;
+            --gray-500: #64748b;
+            --gray-300: #cbd5e1;
+            --gray-100: #f1f5f9;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
             --safe-bottom: env(safe-area-inset-bottom, 16px);
         }
 
@@ -50,256 +52,425 @@
 
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--app-bg);
-            color: var(--app-text);
+            background-color: var(--bg-page);
+            color: var(--dark);
             margin: 0;
             padding: 0;
-            padding-bottom: calc(75px + var(--safe-bottom));
+            padding-bottom: calc(72px + var(--safe-bottom));
             overflow-x: hidden;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* Top App Bar */
-        .mobile-header {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #ffffff;
-            padding: 16px 20px;
+        /* Frosted Glass Top Navigation */
+        .app-topbar {
             position: sticky;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .brand-logo {
-            font-weight: 800;
-            font-size: 1.25rem;
-            letter-spacing: -0.5px;
+        .brand-box {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .brand-badge {
-            font-size: 0.65rem;
-            padding: 2px 8px;
-            background: rgba(59, 130, 246, 0.25);
-            color: #60a5fa;
-            border-radius: 999px;
-            font-weight: 700;
-            border: 1px solid rgba(96, 165, 250, 0.3);
-        }
-
-        /* Bottom Navigation Bar */
-        .mobile-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #ffffff;
-            height: calc(65px + var(--safe-bottom));
-            padding-bottom: var(--safe-bottom);
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            border-top: 1px solid var(--app-border);
-            box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.06);
-            z-index: 1050;
-        }
-
-        .nav-tab {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--app-muted);
-            text-decoration: none;
-            font-size: 0.72rem;
-            font-weight: 600;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            flex: 1;
-            height: 100%;
-            cursor: pointer;
-        }
-
-        .nav-tab i {
-            font-size: 1.35rem;
-            margin-bottom: 2px;
-            transition: transform 0.2s ease;
-        }
-
-        .nav-tab.active {
-            color: var(--app-primary);
-        }
-
-        .nav-tab.active i {
-            transform: translateY(-2px);
-        }
-
-        .nav-tab .badge-counter {
-            position: absolute;
-            top: 6px;
-            right: calc(50% - 18px);
-            background: var(--app-danger);
-            color: #fff;
-            font-size: 0.65rem;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 10px;
-            border: 2px solid #fff;
-            min-width: 18px;
-            text-align: center;
-        }
-
-        .nav-center-btn {
-            position: relative;
-            top: -14px;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+        .brand-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: #ffffff;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
-            border: 4px solid #ffffff;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+        }
+
+        .brand-name {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--dark);
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+        }
+
+        .brand-status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: var(--success);
+            border-radius: 50%;
+            margin-left: 4px;
+        }
+
+        .user-avatar-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid #bfdbfe;
             cursor: pointer;
-            transition: transform 0.15s ease;
         }
 
-        .nav-center-btn:active {
-            transform: scale(0.92);
-        }
-
-        .nav-center-btn i {
-            font-size: 1.5rem;
-            margin: 0;
-        }
-
-        /* Screen containers */
+        /* Screens Layout */
         .app-screen {
             display: none;
-            animation: fadeIn 0.25s ease-out forwards;
-            padding: 16px;
+            padding: 14px 16px;
+            animation: appFadeIn 0.2s ease-out forwards;
         }
 
         .app-screen.active {
             display: block;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
+        @keyframes appFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Modern Card Component */
-        .card-custom {
-            background: #ffffff;
-            border-radius: 16px;
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        /* Sleek Quick Action Cards (Top Dock) */
+        .quick-dock {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
             margin-bottom: 14px;
-            overflow: hidden;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .card-custom:active {
-            transform: scale(0.99);
-        }
-
-        .stat-card {
+        .dock-card {
+            border-radius: 16px;
             padding: 14px;
-            border-radius: 14px;
             display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .stat-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        /* Quick Action Button Grid */
-        .quick-action-btn {
-            background: #ffffff;
-            border: 1px solid var(--app-border);
-            border-radius: 14px;
-            padding: 14px 10px;
-            text-align: center;
+            flex-direction: column;
+            justify-content: space-between;
             cursor: pointer;
-            transition: all 0.15s ease;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid transparent;
         }
 
-        .quick-action-btn:active {
-            background-color: var(--app-primary-light);
-            border-color: #bfdbfe;
-            transform: scale(0.96);
+        .dock-card:active {
+            transform: scale(0.97);
         }
 
-        .quick-action-icon {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 8px auto;
-            border-radius: 14px;
+        .dock-card-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
+        }
+
+        .dock-card-emerald {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.2);
+        }
+
+        .dock-card-icon {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
         }
 
-        /* Filter Chips */
-        .chip-scroll {
+        .dock-card-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            line-height: 1.25;
+            margin-bottom: 2px;
+        }
+
+        .dock-card-subtitle {
+            font-size: 0.72rem;
+            opacity: 0.85;
+        }
+
+        /* Compact Stat Pills Bar */
+        .stat-pills-bar {
             display: flex;
             gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 6px;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
+            margin-bottom: 14px;
         }
 
-        .chip-scroll::-webkit-scrollbar {
+        .stat-pill {
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .stat-pill:active {
+            transform: scale(0.97);
+            background: var(--gray-100);
+        }
+
+        .stat-pill-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--gray-500);
+        }
+
+        .stat-pill-num {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        /* Search & Filter Bar */
+        .search-box {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .search-input {
+            border: none;
+            outline: none;
+            font-size: 0.85rem;
+            font-family: inherit;
+            width: 100%;
+            background: transparent;
+            color: var(--dark);
+        }
+
+        .search-input::placeholder {
+            color: #94a3b8;
+        }
+
+        /* Segment Filter Chips */
+        .filter-scroll {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 4px;
+            margin-bottom: 12px;
+        }
+
+        .filter-scroll::-webkit-scrollbar {
             display: none;
         }
 
-        .chip-btn {
+        .filter-chip {
             white-space: nowrap;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 999px;
-            font-size: 0.8rem;
+            font-size: 0.76rem;
             font-weight: 600;
             background: #ffffff;
-            color: var(--app-muted);
-            border: 1px solid var(--app-border);
+            color: var(--gray-500);
+            border: 1px solid var(--border-color);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
-        .chip-btn.active {
-            background: var(--app-primary);
+        .filter-chip.active {
+            background: var(--dark);
             color: #ffffff;
-            border-color: var(--app-primary);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            border-color: var(--dark);
         }
 
-        /* QR Scanner Viewfinder UI */
-        .scanner-container {
+        /* Modern Ticket Item Card (iOS / Notion style) */
+        .ticket-item {
+            background: #ffffff;
+            border: 1px solid #f1f5f9;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 9px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+        }
+
+        .ticket-item:active {
+            transform: scale(0.985);
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+
+        .ticket-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .ticket-code {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            background: var(--gray-100);
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        .ticket-title {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: var(--dark);
+            margin-bottom: 6px;
+            line-height: 1.35;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .ticket-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.73rem;
+            color: var(--gray-500);
+        }
+
+        .ticket-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Modern Status Badge */
+        .pill-status {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pill-new { background: #dbeafe; color: #1e40af; }
+        .pill-progress { background: #fef3c7; color: #92400e; }
+        .pill-pending { background: #ffedd5; color: #9a3412; }
+        .pill-resolved { background: #dcfce7; color: #166534; }
+        .pill-closed { background: #f1f5f9; color: #475569; }
+
+        /* Modern Approval Card */
+        .approval-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .approval-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .approval-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--dark);
+            margin-bottom: 6px;
+        }
+
+        .approval-desc {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-bottom: 12px;
+            background: var(--bg-page);
+            padding: 8px 10px;
+            border-radius: 8px;
+            line-height: 1.4;
+        }
+
+        .approval-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-approve {
+            flex: 1;
+            background: var(--success);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 9px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-approve:active {
+            transform: scale(0.97);
+        }
+
+        .btn-reject {
+            flex: 1;
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            padding: 9px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .btn-reject:active {
+            transform: scale(0.97);
+        }
+
+        /* QR Scanner Viewport (Clean & Compact) */
+        .scanner-viewport {
             position: relative;
             background: #000;
-            border-radius: 20px;
+            border-radius: 18px;
             overflow: hidden;
             width: 100%;
-            height: 380px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            height: 330px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            margin-bottom: 14px;
         }
 
         #qr-reader {
@@ -314,338 +485,288 @@
             height: 100% !important;
         }
 
-        .scan-overlay {
+        .scanner-reticle {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-
-        .scan-target-box {
-            width: 230px;
-            height: 230px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
             border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 24px;
-            position: relative;
-            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
+            border-radius: 20px;
+            pointer-events: none;
+            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.45);
         }
 
-        /* Corner glowing markers */
-        .scan-target-box::before, .scan-target-box::after {
+        .scanner-reticle::before, .scanner-reticle::after {
             content: '';
             position: absolute;
-            width: 30px;
-            height: 30px;
-            border-color: #38bdf8;
+            width: 24px;
+            height: 24px;
+            border-color: #10b981;
             border-style: solid;
         }
 
-        .scan-target-box::before {
+        .scanner-reticle::before {
             top: -2px;
             left: -2px;
-            border-width: 4px 0 0 4px;
-            border-top-left-radius: 22px;
+            border-width: 3px 0 0 3px;
+            border-top-left-radius: 18px;
         }
 
-        .scan-target-box::after {
+        .scanner-reticle::after {
             bottom: -2px;
             right: -2px;
-            border-width: 0 4px 4px 0;
-            border-bottom-right-radius: 22px;
+            border-width: 0 3px 3px 0;
+            border-bottom-right-radius: 18px;
         }
 
-        /* Red Laser Scanner Line */
-        .scan-laser-line {
+        .scanner-laser {
             position: absolute;
-            left: 5%;
-            right: 5%;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, #ef4444, #f87171, transparent);
-            box-shadow: 0 0 12px #ef4444;
-            animation: laserScan 2.2s infinite ease-in-out;
+            left: 10px;
+            right: 10px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #10b981, transparent);
+            box-shadow: 0 0 10px #10b981;
+            animation: laserMove 2s infinite ease-in-out alternate;
         }
 
-        @keyframes laserScan {
-            0% { top: 8%; opacity: 0.2; }
-            50% { top: 90%; opacity: 1; }
-            100% { top: 8%; opacity: 0.2; }
+        @keyframes laserMove {
+            0% { top: 10%; opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { top: 90%; opacity: 0.3; }
         }
 
-        /* Bottom Sheet Modal Style */
-        .modal.bottom-sheet .modal-dialog {
+        /* Modern Bottom Navigation (Frosted Glass) */
+        .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            margin: 0;
-            max-width: 100%;
-            transform: translate3d(0, 100%, 0);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            height: calc(60px + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom);
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            z-index: 1050;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
         }
 
-        .modal.bottom-sheet.show .modal-dialog {
-            transform: translate3d(0, 0, 0);
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-500);
+            text-decoration: none;
+            font-size: 0.7rem;
+            font-weight: 600;
+            height: 100%;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.15s ease;
+        }
+
+        .nav-item i {
+            font-size: 1.25rem;
+            margin-bottom: 2px;
+            transition: transform 0.15s ease;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item.active i {
+            transform: translateY(-2px);
+        }
+
+        .nav-fab-wrap {
+            position: relative;
+            top: -14px;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 1.4rem;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+            cursor: pointer;
+            border: 3px solid #ffffff;
+            transition: transform 0.15s ease;
+        }
+
+        .nav-fab-wrap:active {
+            transform: scale(0.92);
+        }
+
+        .nav-badge-dot {
+            position: absolute;
+            top: 6px;
+            right: 24%;
+            background: var(--danger);
+            color: #ffffff;
+            font-size: 0.62rem;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 999px;
+            border: 1.5px solid #ffffff;
+        }
+
+        /* Bottom Sheet Modal Styling */
+        .modal.bottom-sheet .modal-dialog {
+            position: fixed;
+            bottom: 0;
+            margin: 0;
+            width: 100%;
+            max-width: 100%;
         }
 
         .modal.bottom-sheet .modal-content {
             border-radius: 24px 24px 0 0;
             border: none;
+            background: #ffffff;
             max-height: 88vh;
             overflow-y: auto;
             padding-bottom: var(--safe-bottom);
         }
 
-        .sheet-drag-handle {
-            width: 40px;
-            height: 5px;
+        .sheet-handle-bar {
+            width: 36px;
+            height: 4px;
             background-color: #cbd5e1;
             border-radius: 999px;
             margin: 10px auto 14px auto;
         }
 
-        /* Status Badge Utilities */
-        .badge-status {
-            padding: 4px 10px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .badge-new { background-color: #dbeafe; color: #1d4ed8; }
-        .badge-assigned { background-color: #e0e7ff; color: #4338ca; }
-        .badge-progress { background-color: #fef3c7; color: #b45309; }
-        .badge-pending { background-color: #ffedd5; color: #c2410c; }
-        .badge-resolved { background-color: #dcfce7; color: #15803d; }
-        .badge-closed { background-color: #f1f5f9; color: #475569; }
-
-        /* Form elements for mobile */
-        .form-control-mobile {
+        .form-control-sleek {
             border-radius: 12px;
-            padding: 12px 14px;
-            font-size: 0.95rem;
-            border: 1px solid var(--app-border);
-            background-color: #ffffff;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px 14px;
+            font-size: 0.88rem;
+            color: var(--dark);
         }
 
-        .form-control-mobile:focus {
-            border-color: var(--app-primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-        }
-
-        /* Pull to refresh indicator */
-        .pull-indicator {
-            text-align: center;
-            padding: 8px;
-            font-size: 0.8rem;
-            color: var(--app-muted);
-            display: none;
+        .form-control-sleek:focus {
+            background: #ffffff;
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
     </style>
 </head>
 <body>
 
-    <!-- Top Mobile App Header -->
-    <header class="mobile-header d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-2">
-            <div class="brand-logo">
-                <i class="bi bi-layers-fill text-primary"></i>
-                <span>TaskFlow</span>
+    <!-- Frosted Glass Top Bar -->
+    <header class="app-topbar">
+        <div class="brand-box">
+            <div class="brand-logo-icon">
+                <i class="bi bi-layers-fill"></i>
             </div>
-            <span class="brand-badge">MOBILE</span>
+            <div>
+                <div class="brand-name">TaskFlow <span class="brand-status-dot" title="Hệ thống trực tuyến"></span></div>
+            </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button class="btn btn-sm btn-dark text-white rounded-circle p-0" style="width:36px; height:36px;" onclick="refreshCurrentTab()" title="Làm mới">
-                <i class="bi bi-arrow-clockwise fs-6"></i>
+            <button class="btn btn-sm btn-light rounded-circle p-0 d-flex align-items-center justify-content-center" style="width:34px; height:34px; border:1px solid #e2e8f0;" onclick="refreshCurrentTab()" title="Làm mới">
+                <i class="bi bi-arrow-clockwise text-muted"></i>
             </button>
             <div class="dropdown">
-                <button class="btn btn-sm p-0 rounded-circle border-0" type="button" data-bs-toggle="dropdown">
-                    <div class="bg-primary text-white rounded-circle fw-bold d-flex align-items-center justify-content-center" style="width:36px; height:36px; font-size:0.9rem;">
-                        <?= mb_strtoupper(mb_substr($user['full_name'] ?? 'U', 0, 1)) ?>
-                    </div>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
-                    <li class="px-3 py-2 border-bottom">
-                        <div class="fw-bold text-dark text-truncate" style="max-width:180px;"><?= htmlspecialchars($user['full_name'] ?? 'User') ?></div>
+                <div class="user-avatar-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <?= mb_strtoupper(mb_substr($user['full_name'] ?? 'U', 0, 1)) ?>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 mt-2 p-2" style="min-width: 210px;">
+                    <li class="px-3 py-2 border-bottom mb-1">
+                        <div class="fw-bold text-dark text-truncate"><?= htmlspecialchars($user['full_name'] ?? 'Người dùng') ?></div>
                         <div class="small text-muted font-monospace"><?= htmlspecialchars($user['username'] ?? '') ?></div>
                         <span class="badge bg-primary-subtle text-primary mt-1"><?= htmlspecialchars($user['role'] ?? 'USER') ?></span>
                     </li>
-                    <li><a class="dropdown-item py-2" href="<?= $baseUrl ?? '' ?>/TaskFlow-v1.0.apk" download><i class="bi bi-android2 me-2 text-success"></i> Tải Cài Đặt APK Android</a></li>
-                    <li><a class="dropdown-item py-2" href="<?= $baseUrl ?? '' ?>/dashboard"><i class="bi bi-display me-2 text-primary"></i> Về Giao Diện Web PC</a></li>
+                    <li>
+                        <a class="dropdown-item py-2 rounded-3 small fw-semibold" href="<?= $baseUrl ?? '' ?>/TaskFlow-v1.1.apk" download>
+                            <i class="bi bi-android2 me-2 text-success"></i> Tải App Android v1.1
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item py-2 rounded-3 small fw-semibold" href="<?= $baseUrl ?? '' ?>/dashboard">
+                            <i class="bi bi-display me-2 text-primary"></i> Giao diện PC
+                        </a>
+                    </li>
                     <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item py-2 text-danger" href="<?= $baseUrl ?? '' ?>/logout"><i class="bi bi-box-arrow-right me-2"></i> Đăng Xuất</a></li>
+                    <li>
+                        <a class="dropdown-item py-2 rounded-3 small fw-semibold text-danger" href="<?= $baseUrl ?? '' ?>/logout">
+                            <i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
     </header>
 
     <!-- ========================================================================= -->
-    <!-- SCREEN 1: TRANG CHỦ (HOME DASHBOARD)                                     -->
+    <!-- SCREEN 1: DANH SÁCH YÊU CẦU & THAO TÁC NHANH (TICKETS HUB)                -->
     <!-- ========================================================================= -->
-    <main id="screen-home" class="app-screen active">
-        <!-- User Greeting Card -->
-        <div class="card-custom p-3 bg-gradient" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff;">
-            <div class="d-flex justify-content-between align-items-start">
+    <main id="screen-tickets" class="app-screen active">
+        <!-- Sleek Quick Dock (2 primary actions) -->
+        <div class="quick-dock">
+            <div class="dock-card dock-card-primary" onclick="openCreateTicketModal('INCIDENT')">
+                <div class="dock-card-icon">
+                    <i class="bi bi-plus-circle-fill"></i>
+                </div>
                 <div>
-                    <div class="text-white-50 small mb-1">Xin chào bạn 👋</div>
-                    <h5 class="fw-bold mb-0 text-white"><?= htmlspecialchars($user['full_name'] ?? 'Người dùng') ?></h5>
-                    <div class="small text-info mt-1"><i class="bi bi-building me-1"></i> <?= htmlspecialchars($user['department'] ?? 'Doanh nghiệp') ?></div>
-                </div>
-                <button class="btn btn-sm btn-outline-light rounded-pill px-3 py-1 font-monospace" style="font-size:0.75rem;" onclick="switchTab('screen-scanner')">
-                    <i class="bi bi-qr-code me-1"></i> Quét QR
-                </button>
-            </div>
-        </div>
-
-        <!-- KPI Stats Grid -->
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <div class="card-custom stat-card bg-white" onclick="switchTab('screen-tickets', 'OPEN')">
-                    <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                        <i class="bi bi-hourglass-split"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5 text-dark"><?= (int)($stats['open_count'] ?? 0) ?></div>
-                        <div class="text-muted" style="font-size:0.75rem;">Đang Xử Lý</div>
-                    </div>
+                    <div class="dock-card-title">Gửi Yêu Cầu</div>
+                    <div class="dock-card-subtitle">Báo sự cố & xin cấp phát</div>
                 </div>
             </div>
-            <div class="col-6">
-                <div class="card-custom stat-card bg-white" onclick="switchTab('screen-approvals')">
-                    <div class="stat-icon bg-danger bg-opacity-10 text-danger">
-                        <i class="bi bi-shield-check"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5 text-dark"><?= count($pendingApprovals ?? []) ?></div>
-                        <div class="text-muted" style="font-size:0.75rem;">Cần Duyệt</div>
-                    </div>
+            <div class="dock-card dock-card-emerald" onclick="switchTab('screen-scanner')">
+                <div class="dock-card-icon">
+                    <i class="bi bi-qr-code-scan"></i>
                 </div>
-            </div>
-            <div class="col-6">
-                <div class="card-custom stat-card bg-white" onclick="switchTab('screen-tickets', 'CLOSED')">
-                    <div class="stat-icon bg-success bg-opacity-10 text-success">
-                        <i class="bi bi-check2-circle"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5 text-dark"><?= (int)($stats['closed_count'] ?? 0) ?></div>
-                        <div class="text-muted" style="font-size:0.75rem;">Hoàn Thành</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="card-custom stat-card bg-white" onclick="switchTab('screen-scanner')">
-                    <div class="stat-icon bg-info bg-opacity-10 text-info">
-                        <i class="bi bi-laptop"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5 text-dark"><?= (int)($stats['my_asset_count'] ?? 0) ?></div>
-                        <div class="text-muted" style="font-size:0.75rem;">Thiết Bị Của Tôi</div>
-                    </div>
+                <div>
+                    <div class="dock-card-title">Quét QR Thiết Bị</div>
+                    <div class="dock-card-subtitle">Tra cứu máy & báo hỏng</div>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Actions Row -->
-        <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-                <h6 class="fw-bold mb-0 text-dark">Thao Tác Nhanh</h6>
+        <!-- Compact Stat Indicators -->
+        <div class="stat-pills-bar">
+            <div class="stat-pill" onclick="filterTicketsByStatus('OPEN')">
+                <div class="stat-pill-label">Đang Xử Lý</div>
+                <div class="stat-pill-num text-warning"><?= (int)($stats['open_count'] ?? 0) ?></div>
             </div>
-            <div class="row g-2">
-                <div class="col-3">
-                    <div class="quick-action-btn" onclick="openCreateTicketModal('INCIDENT')">
-                        <div class="quick-action-icon bg-danger bg-opacity-10 text-danger">
-                            <i class="bi bi-exclamation-octagon-fill"></i>
-                        </div>
-                        <div class="fw-bold text-dark" style="font-size:0.72rem;">Báo Sự Cố</div>
-                    </div>
-                </div>
-                <div class="col-3">
-                    <div class="quick-action-btn" onclick="openCreateTicketModal('SERVICE_REQUEST')">
-                        <div class="quick-action-icon bg-primary bg-opacity-10 text-primary">
-                            <i class="bi bi-box-seam-fill"></i>
-                        </div>
-                        <div class="fw-bold text-dark" style="font-size:0.72rem;">Xin Cấp Phát</div>
-                    </div>
-                </div>
-                <div class="col-3">
-                    <div class="quick-action-btn" onclick="switchTab('screen-scanner')">
-                        <div class="quick-action-icon bg-success bg-opacity-10 text-success">
-                            <i class="bi bi-qr-code-scan"></i>
-                        </div>
-                        <div class="fw-bold text-dark" style="font-size:0.72rem;">Quét Mã QR</div>
-                    </div>
-                </div>
-                <div class="col-3">
-                    <div class="quick-action-btn" onclick="switchTab('screen-approvals')">
-                        <div class="quick-action-icon bg-warning bg-opacity-10 text-warning">
-                            <i class="bi bi-patch-check-fill"></i>
-                        </div>
-                        <div class="fw-bold text-dark" style="font-size:0.72rem;">Phê Duyệt</div>
-                    </div>
-                </div>
+            <div class="stat-pill" onclick="switchTab('screen-approvals')">
+                <div class="stat-pill-label">Cần Duyệt</div>
+                <div class="stat-pill-num text-danger"><?= count($pendingApprovals ?? []) ?></div>
+            </div>
+            <div class="stat-pill" onclick="filterTicketsByStatus('CLOSED')">
+                <div class="stat-pill-label">Đã Xong</div>
+                <div class="stat-pill-num text-success"><?= (int)($stats['closed_count'] ?? 0) ?></div>
             </div>
         </div>
 
-        <!-- Recent Tickets Section -->
-        <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-                <h6 class="fw-bold mb-0 text-dark">Yêu Cầu Gần Đây</h6>
-                <a href="javascript:void(0)" onclick="switchTab('screen-tickets')" class="text-primary text-decoration-none small fw-bold">Xem tất cả <i class="bi bi-chevron-right"></i></a>
-            </div>
-
-            <div id="homeRecentTicketList">
-                <?php if (!empty($recentTickets)): ?>
-                    <?php foreach (array_slice($recentTickets, 0, 5) as $tk): ?>
-                        <div class="card-custom p-3" onclick="openTicketDetail(<?= (int)$tk['id'] ?>)">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <span class="badge bg-secondary-subtle text-secondary font-monospace fw-bold">#<?= htmlspecialchars($tk['ticket_code']) ?></span>
-                                <?= renderMobileStatusBadge($tk['status']) ?>
-                            </div>
-                            <div class="fw-bold text-dark text-truncate mb-1" style="font-size:0.95rem;"><?= htmlspecialchars($tk['title']) ?></div>
-                            <div class="d-flex justify-content-between align-items-center text-muted" style="font-size:0.75rem;">
-                                <span><i class="bi bi-tag me-1"></i><?= htmlspecialchars($tk['category_name'] ?? 'IT') ?></span>
-                                <span><i class="bi bi-clock me-1"></i><?= date('d/m H:i', strtotime($tk['created_at'])) ?></span>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="card-custom p-4 text-center text-muted">
-                        <i class="bi bi-inbox fs-1 mb-2 text-secondary"></i>
-                        <div class="small">Chưa có yêu cầu nào được tạo</div>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </main>
-
-    <!-- ========================================================================= -->
-    <!-- SCREEN 2: DANH SÁCH YÊU CẦU (TICKETS LIST)                               -->
-    <!-- ========================================================================= -->
-    <main id="screen-tickets" class="app-screen">
-        <!-- Search bar -->
-        <div class="card-custom p-2 mb-3 d-flex align-items-center gap-2">
-            <i class="bi bi-search text-muted ms-2"></i>
-            <input type="text" id="ticketSearchInput" class="form-control border-0 shadow-none p-1" style="font-size:0.9rem;" placeholder="Tìm theo mã vé hoặc tiêu đề..." oninput="debounceTicketSearch()">
+        <!-- Search Bar -->
+        <div class="search-box">
+            <i class="bi bi-search text-muted" style="font-size:0.9rem;"></i>
+            <input type="text" id="ticketSearchInput" class="search-input" placeholder="Tìm kiếm theo mã số hoặc tiêu đề..." oninput="debounceTicketSearch()">
         </div>
 
         <!-- Filter Chips -->
-        <div class="chip-scroll mb-3">
-            <button class="chip-btn active" data-status="ALL" onclick="filterTickets(this, 'ALL')">Tất Cả</button>
-            <button class="chip-btn" data-status="OPEN" onclick="filterTickets(this, 'OPEN')">Đang Xử Lý</button>
-            <button class="chip-btn" data-status="PENDING_APPROVAL" onclick="filterTickets(this, 'PENDING_APPROVAL')">Chờ Phê Duyệt</button>
-            <button class="chip-btn" data-status="CLOSED" onclick="filterTickets(this, 'CLOSED')">Đã Đóng</button>
+        <div class="filter-scroll">
+            <button class="filter-chip active" data-status="ALL" onclick="filterTickets(this, 'ALL')">Tất Cả</button>
+            <button class="filter-chip" data-status="OPEN" onclick="filterTickets(this, 'OPEN')">Đang Xử Lý</button>
+            <button class="filter-chip" data-status="PENDING_APPROVAL" onclick="filterTickets(this, 'PENDING_APPROVAL')">Chờ Phê Duyệt</button>
+            <button class="filter-chip" data-status="CLOSED" onclick="filterTickets(this, 'CLOSED')">Đã Đóng</button>
         </div>
 
-        <!-- Dynamic Tickets Container -->
+        <!-- Tickets Container -->
         <div id="ticketsContainer">
             <div class="text-center py-5 text-muted">
                 <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -655,133 +776,160 @@
     </main>
 
     <!-- ========================================================================= -->
-    <!-- SCREEN 3: TRUNG TÂM PHÊ DUYỆT (APPROVALS)                                 -->
+    <!-- SCREEN 2: PHÊ DUYỆT (APPROVALS)                                           -->
     <!-- ========================================================================= -->
     <main id="screen-approvals" class="app-screen">
-        <div class="d-flex justify-content-between align-items-center mb-3 px-1">
-            <h6 class="fw-bold mb-0 text-dark">Phiếu Cần Phê Duyệt</h6>
-            <span class="badge bg-danger rounded-pill px-2" id="approvalCountBadge">0 phiếu</span>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0 text-dark">Phiếu Cần Bạn Phê Duyệt</h6>
+            <span class="badge bg-danger rounded-pill px-2 py-1" id="approvalCountBadge">0 phiếu</span>
         </div>
 
         <div id="approvalsContainer">
             <div class="text-center py-5 text-muted">
                 <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                <div class="small mt-2">Đang kiểm tra yêu cầu duyệt...</div>
+                <div class="small mt-2">Đang kiểm tra danh sách...</div>
             </div>
         </div>
     </main>
 
     <!-- ========================================================================= -->
-    <!-- SCREEN 4: QUÉT MÃ QR THIẾT BỊ (ASSET SCANNER)                            -->
+    <!-- SCREEN 3: QUÉT QR THIẾT BỊ (ASSET SCANNER)                                -->
     <!-- ========================================================================= -->
     <main id="screen-scanner" class="app-screen">
-        <div class="card-custom p-3 mb-3 bg-white">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-camera-fill text-primary me-2"></i> Camera Quét QR</h6>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-2" id="btnToggleFlash" onclick="toggleFlashlight()" style="display:none;">
-                        <i class="bi bi-lightning-fill"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary rounded-pill px-2" onclick="switchCamera()">
-                        <i class="bi bi-arrow-repeat"></i>
-                    </button>
-                </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <h6 class="fw-bold text-dark mb-0">Quét Tem QR Thiết Bị</h6>
+                <div class="text-muted" style="font-size:0.75rem;">Hướng camera vào mã QR dán trên máy tính</div>
             </div>
-            <p class="text-muted small mb-3">Hướng camera vào tem QR dán trên máy tính hoặc thiết bị để tra cứu thông tin.</p>
+            <button class="btn btn-sm btn-light rounded-pill px-3 fw-semibold border" onclick="switchCamera()">
+                <i class="bi bi-arrow-repeat me-1"></i> Đổi Camera
+            </button>
+        </div>
 
-            <!-- Video Viewfinder Frame -->
-            <div class="scanner-container mb-3" id="scannerWrapper">
-                <div id="qr-reader"></div>
-                <div class="scan-overlay">
-                    <div class="scan-target-box">
-                        <div class="scan-laser-line"></div>
-                    </div>
-                    <div class="text-white small mt-3 fw-bold bg-dark bg-opacity-75 px-3 py-1 rounded-pill" id="scanStatusText">
-                        Đang quét mã QR...
-                    </div>
-                </div>
-            </div>
-
-            <!-- Alternative manual input & file upload -->
-            <div class="d-flex gap-2">
-                <div class="input-group">
-                    <input type="text" id="manualAssetCodeInput" class="form-control form-control-sm font-monospace" placeholder="Nhập mã (vd: AST-000001)">
-                    <button class="btn btn-primary btn-sm px-3 fw-bold" onclick="lookupManualAsset()">Tra cứu</button>
-                </div>
-            </div>
-            <div class="text-center mt-3">
-                <label for="qrFileInput" class="text-primary small fw-bold cursor-pointer">
-                    <i class="bi bi-image me-1"></i> Chọn ảnh chứa mã QR từ thư viện ảnh
-                </label>
-                <input type="file" id="qrFileInput" accept="image/*" class="d-none" onchange="scanQRFromImage(event)">
+        <!-- Camera Viewport -->
+        <div class="scanner-viewport" id="scannerWrapper">
+            <div id="qr-reader"></div>
+            <div class="scanner-reticle">
+                <div class="scanner-laser"></div>
             </div>
         </div>
 
-        <!-- Scanned Result Card (Hidden until scan) -->
-        <div id="scannedAssetResult"></div>
+        <!-- Manual Input / Gallery Fallback -->
+        <div class="d-flex gap-2 mb-2">
+            <input type="text" id="manualAssetCodeInput" class="form-control form-control-sleek font-monospace" placeholder="Nhập mã (vd: AST-000001)">
+            <button class="btn btn-primary px-3 fw-bold rounded-3" onclick="lookupManualAsset()" style="white-space:nowrap;">Tra cứu</button>
+        </div>
+        <div class="text-center mt-2">
+            <label for="qrFileInput" class="text-primary small fw-semibold cursor-pointer">
+                <i class="bi bi-image me-1"></i> Chọn ảnh chứa mã QR từ thư viện máy
+            </label>
+            <input type="file" id="qrFileInput" accept="image/*" class="d-none" onchange="scanQRFromImage(event)">
+        </div>
     </main>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 1: TẠO YÊU CẦU MỚI (CREATE TICKET MODAL)                            -->
+    <!-- SCREEN 4: TÀI KHOẢN & THÔNG TIN                                           -->
+    <!-- ========================================================================= -->
+    <main id="screen-profile" class="app-screen">
+        <div class="bg-white border rounded-4 p-3 mb-3 text-center">
+            <div class="user-avatar-btn mx-auto mb-2" style="width:56px; height:56px; font-size:1.3rem;">
+                <?= mb_strtoupper(mb_substr($user['full_name'] ?? 'U', 0, 1)) ?>
+            </div>
+            <h6 class="fw-bold text-dark mb-1"><?= htmlspecialchars($user['full_name'] ?? 'Người dùng') ?></h6>
+            <div class="text-muted small font-monospace mb-2"><?= htmlspecialchars($user['username'] ?? '') ?></div>
+            <span class="badge bg-primary-subtle text-primary"><?= htmlspecialchars($user['role'] ?? 'USER') ?></span>
+            <div class="small text-muted mt-2"><i class="bi bi-building me-1"></i><?= htmlspecialchars($user['department'] ?? 'Doanh nghiệp') ?></div>
+        </div>
+
+        <div class="bg-white border rounded-4 p-2 mb-3">
+            <a href="<?= $baseUrl ?? '' ?>/TaskFlow-v1.1.apk" download class="d-flex align-items-center justify-content-between p-2 text-decoration-none text-dark border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 bg-success bg-opacity-10 text-success rounded-3"><i class="bi bi-android2 fs-5"></i></div>
+                    <div>
+                        <div class="fw-bold small">Cập nhật App Android (APK v1.1)</div>
+                        <div class="text-muted" style="font-size:0.72rem;">Bản cài đặt mới nhất</div>
+                    </div>
+                </div>
+                <i class="bi bi-download text-muted"></i>
+            </a>
+            <a href="<?= $baseUrl ?? '' ?>/dashboard" class="d-flex align-items-center justify-content-between p-2 text-decoration-none text-dark border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3"><i class="bi bi-display fs-5"></i></div>
+                    <div>
+                        <div class="fw-bold small">Chuyển sang Giao Diện Web PC</div>
+                        <div class="text-muted" style="font-size:0.72rem;">Xem đầy đủ bảng biểu & báo cáo</div>
+                    </div>
+                </div>
+                <i class="bi bi-chevron-right text-muted"></i>
+            </a>
+            <a href="<?= $baseUrl ?? '' ?>/logout" class="d-flex align-items-center justify-content-between p-2 text-decoration-none text-danger">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 bg-danger bg-opacity-10 text-danger rounded-3"><i class="bi bi-box-arrow-right fs-5"></i></div>
+                    <div class="fw-bold small">Đăng Xuất Tài Khoản</div>
+                </div>
+                <i class="bi bi-chevron-right text-muted"></i>
+            </a>
+        </div>
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- BOTTOM SHEET MODAL 1: TẠO YÊU CẦU MỚI                                     -->
     <!-- ========================================================================= -->
     <div class="modal bottom-sheet fade" id="modalCreateTicket" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content shadow-lg">
-                <div class="sheet-drag-handle"></div>
-                <div class="modal-header border-0 pt-0 px-4">
-                    <h5 class="modal-title fw-bold text-dark" id="createTicketTitle">Gửi Yêu Cầu Hỗ Trợ</h5>
+                <div class="sheet-handle-bar"></div>
+                <div class="modal-header border-0 pt-0 px-3 pb-2">
+                    <h6 class="modal-title fw-bold text-dark" id="createTicketTitle">Gửi Yêu Cầu Hỗ Trợ</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-4 pt-1">
+                <div class="modal-body px-3 pt-0">
                     <form id="mobileCreateTicketForm" onsubmit="submitMobileTicket(event)">
-                        <!-- Type selector chips -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Loại yêu cầu:</label>
-                            <div class="d-flex gap-2">
-                                <label class="btn btn-outline-danger flex-fill active py-2 rounded-3 text-start small fw-bold" id="labelTypeIncident">
-                                    <input type="radio" name="ticket_type" value="INCIDENT" class="d-none" checked onchange="toggleTicketType('INCIDENT')">
-                                    <i class="bi bi-exclamation-octagon-fill me-1"></i> Báo Sự Cố
-                                </label>
-                                <label class="btn btn-outline-primary flex-fill py-2 rounded-3 text-start small fw-bold" id="labelTypeRequest">
-                                    <input type="radio" name="ticket_type" value="SERVICE_REQUEST" class="d-none" onchange="toggleTicketType('SERVICE_REQUEST')">
-                                    <i class="bi bi-box-seam-fill me-1"></i> Dịch Vụ Mới
-                                </label>
-                            </div>
+                        <!-- Type selector pills -->
+                        <div class="d-flex gap-2 mb-3">
+                            <label class="btn btn-outline-danger flex-fill active py-2 rounded-3 text-start small fw-bold" id="labelTypeIncident">
+                                <input type="radio" name="ticket_type" value="INCIDENT" class="d-none" checked onchange="toggleTicketType('INCIDENT')">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i> Báo Sự Cố
+                            </label>
+                            <label class="btn btn-outline-primary flex-fill py-2 rounded-3 text-start small fw-bold" id="labelTypeRequest">
+                                <input type="radio" name="ticket_type" value="SERVICE_REQUEST" class="d-none" onchange="toggleTicketType('SERVICE_REQUEST')">
+                                <i class="bi bi-box-seam-fill me-1"></i> Xin Cấp Phát
+                            </label>
                         </div>
 
                         <!-- Title -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Tiêu đề yêu cầu <span class="text-danger">*</span></label>
-                            <input type="text" name="title" id="formTicketTitle" class="form-control form-control-mobile" placeholder="Tóm tắt ngắn gọn sự cố..." required>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold text-dark mb-1">Tiêu đề yêu cầu <span class="text-danger">*</span></label>
+                            <input type="text" name="title" id="formTicketTitle" class="form-control form-control-sleek" placeholder="Tóm tắt ngắn gọn vấn đề..." required>
                         </div>
 
-                        <!-- Category -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Danh mục sự cố / dịch vụ <span class="text-danger">*</span></label>
-                            <select name="category_id" id="formTicketCategory" class="form-select form-control-mobile" required>
-                                <option value="">-- Chọn danh mục --</option>
-                                <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= (int)$cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <!-- Priority -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Mức độ ưu tiên</label>
-                            <select name="priority_id" id="formTicketPriority" class="form-select form-control-mobile">
-                                <?php foreach ($priorities as $p): ?>
-                                    <option value="<?= (int)$p['id'] ?>" <?= ($p['level'] === 'MEDIUM' || $p['id'] == 3) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($p['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                        <!-- Category & Priority Row -->
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-dark mb-1">Danh mục <span class="text-danger">*</span></label>
+                                <select name="category_id" id="formTicketCategory" class="form-select form-control-sleek" required>
+                                    <option value="">-- Chọn --</option>
+                                    <?php foreach ($categories as $cat): ?>
+                                        <option value="<?= (int)$cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-dark mb-1">Mức ưu tiên</label>
+                                <select name="priority_id" id="formTicketPriority" class="form-select form-control-sleek">
+                                    <?php foreach ($priorities as $p): ?>
+                                        <option value="<?= (int)$p['id'] ?>" <?= ($p['level'] === 'MEDIUM' || $p['id'] == 3) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($p['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                         </div>
 
                         <!-- Linked Asset -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Thiết bị gặp sự cố (Tùy chọn)</label>
-                            <select name="asset_id" id="formTicketAsset" class="form-select form-control-mobile font-monospace">
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold text-dark mb-1">Thiết bị liên quan (Tùy chọn)</label>
+                            <select name="asset_id" id="formTicketAsset" class="form-select form-control-sleek font-monospace">
                                 <option value="">-- Không đính kèm thiết bị --</option>
                                 <?php foreach ($userAssets as $ast): ?>
                                     <option value="<?= (int)$ast['id'] ?>">
@@ -793,19 +941,15 @@
 
                         <!-- Description -->
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Mô tả chi tiết <span class="text-danger">*</span></label>
-                            <textarea name="description" id="formTicketDescription" rows="4" class="form-control form-control-mobile" placeholder="Mô tả cụ thể hiện tượng gặp phải để kỹ thuật viên hỗ trợ nhanh nhất..." required></textarea>
+                            <label class="form-label small fw-bold text-dark mb-1">Nội dung chi tiết <span class="text-danger">*</span></label>
+                            <textarea name="description" id="formTicketDescription" rows="3" class="form-control form-control-sleek" placeholder="Mô tả sự cố hoặc yêu cầu để IT hỗ trợ nhanh nhất..." required></textarea>
                         </div>
 
-                        <!-- Location -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-dark">Vị trí / Bàn làm việc</label>
-                            <input type="text" name="location" class="form-control form-control-mobile" placeholder="Ví dụ: Tầng 3, Phòng Kế Toán..." value="<?= htmlspecialchars($user['department'] ?? '') ?>">
-                        </div>
+                        <input type="hidden" name="location" value="<?= htmlspecialchars($user['department'] ?? '') ?>">
 
                         <!-- Submit Button -->
-                        <button type="submit" id="btnSubmitMobileTicket" class="btn btn-primary w-100 py-3 fw-bold rounded-4 shadow mb-2">
-                            <i class="bi bi-send-fill me-2"></i> Gửi Yêu Cầu Hỗ Trợ
+                        <button type="submit" id="btnSubmitMobileTicket" class="btn btn-primary w-100 py-2 fw-bold rounded-3 shadow-sm mb-2">
+                            <i class="bi bi-send-fill me-1"></i> Gửi Yêu Cầu Hỗ Trợ
                         </button>
                     </form>
                 </div>
@@ -814,20 +958,20 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 2: CHI TIẾT TICKET (TICKET DETAIL MODAL)                             -->
+    <!-- BOTTOM SHEET MODAL 2: CHI TIẾT YÊU CẦU                                     -->
     <!-- ========================================================================= -->
     <div class="modal bottom-sheet fade" id="modalTicketDetail" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content shadow-lg">
-                <div class="sheet-drag-handle"></div>
-                <div class="modal-header border-0 pt-0 px-4">
+                <div class="sheet-handle-bar"></div>
+                <div class="modal-header border-0 pt-0 px-3 pb-2">
                     <div>
-                        <span class="badge bg-secondary-subtle text-secondary font-monospace" id="detailTicketCode">#CODE</span>
-                        <h5 class="modal-title fw-bold text-dark mt-1" id="detailTicketTitle">Tiêu Đề Phiếu</h5>
+                        <span class="ticket-code" id="detailTicketCode">#CODE</span>
+                        <h6 class="modal-title fw-bold text-dark mt-1" id="detailTicketTitle">Tiêu Đề Phiếu</h6>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-4 pt-1" id="detailTicketBody">
+                <div class="modal-body px-3 pt-0" id="detailTicketBody">
                     <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
                 </div>
             </div>
@@ -835,60 +979,60 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 3: KẾT QUẢ QUÉT THIẾT BỊ (ASSET DETAIL MODAL)                       -->
+    <!-- BOTTOM SHEET MODAL 3: KẾT QUẢ QUÉT THIẾT BỊ                               -->
     <!-- ========================================================================= -->
     <div class="modal bottom-sheet fade" id="modalAssetDetail" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content shadow-lg">
-                <div class="sheet-drag-handle"></div>
-                <div class="modal-header border-0 pt-0 px-4">
+                <div class="sheet-handle-bar"></div>
+                <div class="modal-header border-0 pt-0 px-3 pb-2">
                     <div class="d-flex align-items-center gap-2">
-                        <div class="p-2 bg-info bg-opacity-10 text-info rounded-circle">
-                            <i class="bi bi-laptop fs-4"></i>
+                        <div class="p-2 bg-success bg-opacity-10 text-success rounded-3">
+                            <i class="bi bi-laptop fs-5"></i>
                         </div>
                         <div>
-                            <span class="badge bg-info-subtle text-info font-monospace fw-bold" id="assetDetailCode">AST-000000</span>
-                            <h5 class="modal-title fw-bold text-dark mt-1" id="assetDetailName">Tên Thiết Bị</h5>
+                            <span class="ticket-code" id="assetDetailCode">AST-000000</span>
+                            <h6 class="modal-title fw-bold text-dark mt-1 mb-0" id="assetDetailName">Tên Thiết Bị</h6>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-4 pt-1" id="assetDetailBody">
+                <div class="modal-body px-3 pt-0" id="assetDetailBody">
                     <!-- Dynamic details loaded via JS -->
                 </div>
-                <div class="modal-footer border-0 p-3 bg-light d-flex gap-2">
-                    <button type="button" class="btn btn-outline-danger flex-fill fw-bold rounded-pill" id="btnReportAssetIncident">
+                <div class="modal-footer border-0 p-3 pt-0 d-flex gap-2">
+                    <button type="button" class="btn btn-danger flex-fill fw-bold rounded-3 py-2" id="btnReportAssetIncident">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i> Báo Sự Cố Máy Này
                     </button>
-                    <button type="button" class="btn btn-secondary px-4 fw-bold rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-light px-3 fw-bold rounded-3" data-bs-dismiss="modal">Đóng</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bottom App Navigation Bar -->
-    <nav class="mobile-nav">
-        <div class="nav-tab active" onclick="switchTab('screen-home')" id="tab-home">
-            <i class="bi bi-house-door-fill"></i>
-            <span>Trang chủ</span>
-        </div>
-        <div class="nav-tab" onclick="switchTab('screen-tickets')" id="tab-tickets">
+    <!-- Frosted Glass Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('screen-tickets')" id="tab-tickets">
             <i class="bi bi-ticket-detailed-fill"></i>
             <span>Yêu cầu</span>
         </div>
-        <div class="nav-center-btn" onclick="openCreateTicketModal('INCIDENT')">
-            <i class="bi bi-plus-lg"></i>
-        </div>
-        <div class="nav-tab" onclick="switchTab('screen-approvals')" id="tab-approvals">
+        <div class="nav-item" onclick="switchTab('screen-approvals')" id="tab-approvals">
             <i class="bi bi-patch-check-fill"></i>
             <span>Phê duyệt</span>
             <?php $pendingCount = count($pendingApprovals ?? []); if ($pendingCount > 0): ?>
-                <span class="badge-counter" id="navApprovalBadge"><?= $pendingCount ?></span>
+                <span class="nav-badge-dot" id="navApprovalBadge"><?= $pendingCount ?></span>
             <?php endif; ?>
         </div>
-        <div class="nav-tab" onclick="switchTab('screen-scanner')" id="tab-scanner">
+        <div class="nav-fab-wrap" onclick="openCreateTicketModal('INCIDENT')" title="Tạo yêu cầu mới">
+            <i class="bi bi-plus-lg"></i>
+        </div>
+        <div class="nav-item" onclick="switchTab('screen-scanner')" id="tab-scanner">
             <i class="bi bi-qr-code-scan"></i>
             <span>Quét QR</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('screen-profile')" id="tab-profile">
+            <i class="bi bi-person-circle"></i>
+            <span>Cá nhân</span>
         </div>
     </nav>
 
@@ -899,34 +1043,38 @@
         const BASE_URL = '<?= $baseUrl ?? '' ?>';
         const CSRF_TOKEN = '<?= \App\Core\Session::csrfToken() ?>';
 
-        let currentScreen = 'screen-home';
+        let currentScreen = 'screen-tickets';
         let currentTicketFilter = 'ALL';
         let searchTimer = null;
         let html5QrCode = null;
         let isScannerRunning = false;
-        let currentCameraFacing = "environment"; // default back camera
+        let currentCameraFacing = "environment";
         let lastScannedAsset = null;
+
+        // Auto load tickets on startup
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTickets();
+        });
 
         // =========================================================================
         // NAVIGATION & TAB SWITCHING
         // =========================================================================
         function switchTab(screenId, optionalParam) {
-            // Stop scanner if leaving scanner screen
             if (currentScreen === 'screen-scanner' && screenId !== 'screen-scanner') {
                 stopScanner();
             }
 
             document.querySelectorAll('.app-screen').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
             const targetScreen = document.getElementById(screenId);
             if (targetScreen) targetScreen.classList.add('active');
 
             const tabMap = {
-                'screen-home': 'tab-home',
                 'screen-tickets': 'tab-tickets',
                 'screen-approvals': 'tab-approvals',
-                'screen-scanner': 'tab-scanner'
+                'screen-scanner': 'tab-scanner',
+                'screen-profile': 'tab-profile'
             };
             const activeTab = document.getElementById(tabMap[screenId]);
             if (activeTab) activeTab.classList.add('active');
@@ -934,11 +1082,10 @@
             currentScreen = screenId;
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            // Screen specific initialization
             if (screenId === 'screen-tickets') {
                 if (optionalParam) {
                     currentTicketFilter = optionalParam;
-                    document.querySelectorAll('.chip-btn').forEach(btn => {
+                    document.querySelectorAll('.filter-chip').forEach(btn => {
                         btn.classList.toggle('active', btn.dataset.status === optionalParam);
                     });
                 }
@@ -951,15 +1098,23 @@
         }
 
         function refreshCurrentTab() {
-            if (currentScreen === 'screen-home') {
-                window.location.reload();
-            } else if (currentScreen === 'screen-tickets') {
+            if (currentScreen === 'screen-tickets') {
                 loadTickets();
             } else if (currentScreen === 'screen-approvals') {
                 loadApprovals();
             } else if (currentScreen === 'screen-scanner') {
                 startScanner();
+            } else {
+                window.location.reload();
             }
+        }
+
+        function filterTicketsByStatus(status) {
+            currentTicketFilter = status;
+            document.querySelectorAll('.filter-chip').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.status === status);
+            });
+            switchTab('screen-tickets', status);
         }
 
         // =========================================================================
@@ -970,7 +1125,7 @@
             const search = document.getElementById('ticketSearchInput') ? document.getElementById('ticketSearchInput').value.trim() : '';
 
             container.innerHTML = `
-                <div class="text-center py-5 text-muted">
+                <div class="text-center py-4 text-muted">
                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                     <div class="small mt-2">Đang tải danh sách...</div>
                 </div>
@@ -981,10 +1136,10 @@
                 .then(data => {
                     if (!data.success || !data.tickets || data.tickets.length === 0) {
                         container.innerHTML = `
-                            <div class="card-custom p-5 text-center text-muted">
-                                <i class="bi bi-inbox fs-1 mb-2 text-secondary"></i>
-                                <div class="fw-bold">Không tìm thấy yêu cầu nào</div>
-                                <div class="small text-muted mt-1">Thử thay đổi bộ lọc hoặc tạo phiếu mới.</div>
+                            <div class="bg-white border rounded-4 p-4 text-center text-muted my-2">
+                                <i class="bi bi-inbox fs-1 mb-2 text-secondary d-block"></i>
+                                <div class="fw-bold text-dark small">Không tìm thấy yêu cầu nào</div>
+                                <div class="text-muted" style="font-size:0.75rem;">Bấm dấu (+) để gửi yêu cầu hỗ trợ mới.</div>
                             </div>
                         `;
                         return;
@@ -995,19 +1150,19 @@
                         const statusBadge = getStatusBadgeHtml(tk.status);
                         const priorityColor = tk.priority_color || '#3b82f6';
                         html += `
-                            <div class="card-custom p-3" onclick="openTicketDetail(${tk.id})">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="ticket-item" onclick="openTicketDetail(${tk.id})">
+                                <div class="ticket-item-header">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="badge bg-secondary-subtle text-secondary font-monospace fw-bold">#${tk.ticket_code}</span>
-                                        <span class="badge" style="background-color:${priorityColor}20; color:${priorityColor}; border:1px solid ${priorityColor}40; font-size:0.68rem;">
-                                            ${tk.priority_name || 'Trung bình'}
+                                        <span class="ticket-code">#${tk.ticket_code}</span>
+                                        <span style="font-size:0.7rem; font-weight:700; color:${priorityColor}">
+                                            ● ${tk.priority_name || 'Bình thường'}
                                         </span>
                                     </div>
                                     ${statusBadge}
                                 </div>
-                                <div class="fw-bold text-dark text-truncate mb-1" style="font-size:0.95rem;">${escapeHtml(tk.title)}</div>
-                                <div class="d-flex justify-content-between align-items-center text-muted mt-2" style="font-size:0.75rem;">
-                                    <span><i class="bi bi-tag me-1"></i>${escapeHtml(tk.category_name || 'Sự cố IT')}</span>
+                                <div class="ticket-title">${escapeHtml(tk.title)}</div>
+                                <div class="ticket-meta">
+                                    <span class="ticket-tag"><i class="bi bi-tag"></i> ${escapeHtml(tk.category_name || 'Sự cố IT')}</span>
                                     <span><i class="bi bi-clock me-1"></i>${formatDate(tk.created_at)}</span>
                                 </div>
                             </div>
@@ -1021,7 +1176,7 @@
         }
 
         function filterTickets(btn, status) {
-            document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentTicketFilter = status;
             loadTickets();
@@ -1029,7 +1184,7 @@
 
         function debounceTicketSearch() {
             clearTimeout(searchTimer);
-            searchTimer = setTimeout(loadTickets, 350);
+            searchTimer = setTimeout(loadTickets, 300);
         }
 
         function openTicketDetail(ticketId) {
@@ -1039,7 +1194,7 @@
 
             document.getElementById('detailTicketCode').textContent = `Đang tải...`;
             document.getElementById('detailTicketTitle').textContent = `Chi tiết yêu cầu #${ticketId}`;
-            body.innerHTML = `<div class="text-center py-5"><div class="spinner-border spinner-border-sm text-primary"></div></div>`;
+            body.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>`;
             modal.show();
 
             fetch(`${BASE_URL}/mobile/api/tickets/${ticketId}`)
@@ -1068,17 +1223,17 @@
                     }
 
                     body.innerHTML = `
-                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <div class="mb-2 d-flex justify-content-between align-items-center">
                             ${getStatusBadgeHtml(tk.status)}
                             <span class="text-muted small"><i class="bi bi-clock me-1"></i>${formatDate(tk.created_at)}</span>
                         </div>
-                        <div class="p-3 bg-light rounded-3 mb-3 text-dark small" style="white-space: pre-wrap;">
+                        <div class="p-3 bg-light rounded-3 mb-3 text-dark small" style="white-space: pre-wrap; line-height:1.5;">
                             ${escapeHtml(tk.description || 'Không có mô tả chi tiết.')}
                         </div>
-                        <div class="row g-2 mb-3 text-muted small">
+                        <div class="row g-2 mb-2 text-muted small bg-white border rounded-3 p-2">
                             <div class="col-6"><strong>Người yêu cầu:</strong><br>${escapeHtml(tk.requester_name || 'N/A')}</div>
                             <div class="col-6"><strong>Kỹ thuật viên:</strong><br>${escapeHtml(tk.assignee_name || 'Chưa phân công')}</div>
-                            <div class="col-6 mt-2"><strong>Mức độ ưu tiên:</strong><br>${escapeHtml(tk.priority_name || 'Bình thường')}</div>
+                            <div class="col-6 mt-2"><strong>Mức ưu tiên:</strong><br>${escapeHtml(tk.priority_name || 'Bình thường')}</div>
                             <div class="col-6 mt-2"><strong>Vị trí:</strong><br>${escapeHtml(tk.location || 'Văn phòng')}</div>
                         </div>
                         ${checklistHtml}
@@ -1110,13 +1265,13 @@
             if (type === 'INCIDENT') {
                 btnInc.classList.add('active');
                 btnReq.classList.remove('active');
-                title.textContent = 'Báo Cáo Sự Cố (Incident)';
-                document.getElementById('formTicketTitle').placeholder = 'Ví dụ: Không kết nối được máy in tầng 2...';
+                title.textContent = 'Báo Sự Cố Kỹ Thuật';
+                document.getElementById('formTicketTitle').placeholder = 'Ví dụ: Hỏng màn hình, không gõ được bàn phím...';
             } else {
                 btnReq.classList.add('active');
                 btnInc.classList.remove('active');
-                title.textContent = 'Yêu Cầu Dịch Vụ Mới';
-                document.getElementById('formTicketTitle').placeholder = 'Ví dụ: Xin cấp quyền truy cập tài liệu kế toán...';
+                title.textContent = 'Xin Cấp Phát Dịch Vụ / Thiết Bị';
+                document.getElementById('formTicketTitle').placeholder = 'Ví dụ: Cấp chuột máy tính mới, cấp quyền ERP...';
             }
         }
 
@@ -1137,7 +1292,7 @@
             };
 
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang gửi yêu cầu...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang gửi...';
 
             fetch(`${BASE_URL}/mobile/api/tickets/create`, {
                 method: 'POST',
@@ -1147,10 +1302,9 @@
             .then(res => res.json())
             .then(data => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-send-fill me-2"></i> Gửi Yêu Cầu Hỗ Trợ';
+                btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Gửi Yêu Cầu Hỗ Trợ';
 
                 if (data.success) {
-                    alert(data.message || 'Tạo yêu cầu thành công!');
                     form.reset();
                     bootstrap.Modal.getInstance(document.getElementById('modalCreateTicket')).hide();
                     switchTab('screen-tickets', 'ALL');
@@ -1160,7 +1314,7 @@
             })
             .catch(err => {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-send-fill me-2"></i> Gửi Yêu Cầu Hỗ Trợ';
+                btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Gửi Yêu Cầu Hỗ Trợ';
                 alert('Lỗi kết nối máy chủ: ' + err.message);
             });
         }
@@ -1174,7 +1328,7 @@
             const navBadge = document.getElementById('navApprovalBadge');
 
             container.innerHTML = `
-                <div class="text-center py-5 text-muted">
+                <div class="text-center py-4 text-muted">
                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                     <div class="small mt-2">Đang tải danh sách phê duyệt...</div>
                 </div>
@@ -1193,10 +1347,10 @@
 
                     if (count === 0) {
                         container.innerHTML = `
-                            <div class="card-custom p-5 text-center text-muted">
-                                <i class="bi bi-check-circle fs-1 mb-2 text-success"></i>
-                                <div class="fw-bold">Bạn không có yêu cầu nào cần duyệt</div>
-                                <div class="small text-muted mt-1">Toàn bộ phiếu đã được xử lý hoàn tất.</div>
+                            <div class="bg-white border rounded-4 p-4 text-center text-muted my-2">
+                                <i class="bi bi-check-circle fs-1 mb-2 text-success d-block"></i>
+                                <div class="fw-bold text-dark small">Không có yêu cầu nào cần duyệt</div>
+                                <div class="text-muted" style="font-size:0.75rem;">Toàn bộ đề xuất đã được xử lý hoàn tất.</div>
                             </div>
                         `;
                         return;
@@ -1205,22 +1359,22 @@
                     let html = '';
                     approvals.forEach(ap => {
                         html += `
-                            <div class="card-custom p-3" id="approvalCard-${ap.id}">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <span class="badge bg-warning-subtle text-warning font-monospace fw-bold">CHỜ DUYỆT</span>
+                            <div class="approval-card" id="approvalCard-${ap.id}">
+                                <div class="approval-header">
+                                    <span class="ticket-code" style="background:#fef3c7; color:#92400e;">CHỜ DUYỆT</span>
                                     <span class="text-muted small"><i class="bi bi-clock me-1"></i>${formatDate(ap.created_at)}</span>
                                 </div>
-                                <h6 class="fw-bold text-dark mb-1">${escapeHtml(ap.title || ap.step_name || 'Phê duyệt dịch vụ')}</h6>
-                                <p class="text-muted small mb-2">${escapeHtml(ap.description || 'Không có mô tả thêm')}</p>
+                                <div class="approval-title">${escapeHtml(ap.title || ap.step_name || 'Phê duyệt dịch vụ')}</div>
+                                <div class="approval-desc">${escapeHtml(ap.description || 'Không có mô tả chi tiết')}</div>
                                 <div class="small text-muted mb-3">
                                     <i class="bi bi-person me-1"></i> Người yêu cầu: <strong>${escapeHtml(ap.requester_name || 'Nhân viên')}</strong>
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-outline-danger flex-fill py-2 fw-bold rounded-pill text-sm" onclick="decideApproval(${ap.id}, 'REJECTED')">
-                                        <i class="bi bi-x-circle me-1"></i> Từ Chối
+                                <div class="approval-actions">
+                                    <button class="btn-reject" onclick="decideApproval(${ap.id}, 'REJECTED')">
+                                        <i class="bi bi-x-circle"></i> Từ Chối
                                     </button>
-                                    <button class="btn btn-success flex-fill py-2 fw-bold rounded-pill text-sm shadow-sm" onclick="decideApproval(${ap.id}, 'APPROVED')">
-                                        <i class="bi bi-check-circle-fill me-1"></i> Phê Duyệt
+                                    <button class="btn-approve" onclick="decideApproval(${ap.id}, 'APPROVED')">
+                                        <i class="bi bi-check-circle-fill"></i> Phê Duyệt
                                     </button>
                                 </div>
                             </div>
@@ -1254,10 +1408,10 @@
                     playSuccessBeep();
                     const card = document.getElementById(`approvalCard-${approvalId}`);
                     if (card) {
-                        card.style.opacity = '0.4';
+                        card.style.opacity = '0.3';
                         card.style.pointerEvents = 'none';
                     }
-                    setTimeout(loadApprovals, 500);
+                    setTimeout(loadApprovals, 400);
                 } else {
                     alert(data.message || 'Lỗi xử lý phê duyệt.');
                 }
@@ -1270,17 +1424,15 @@
         // =========================================================================
         function startScanner() {
             if (isScannerRunning) return;
-            const statusEl = document.getElementById('scanStatusText');
-            if (statusEl) statusEl.textContent = 'Đang khởi động camera...';
 
             if (typeof Html5Qrcode === 'undefined') {
-                if (statusEl) statusEl.textContent = 'Thư viện QR chưa sẵn sàng. Vui lòng nhập mã tay.';
+                alert('Thư viện quét mã đang tải, vui lòng thử lại sau vài giây.');
                 return;
             }
 
             try {
                 html5QrCode = new Html5Qrcode("qr-reader");
-                const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+                const config = { fps: 15, qrbox: { width: 200, height: 200 } };
 
                 html5QrCode.start(
                     { facingMode: currentCameraFacing },
@@ -1289,10 +1441,8 @@
                     onQrScanError
                 ).then(() => {
                     isScannerRunning = true;
-                    if (statusEl) statusEl.textContent = 'Hướng camera vào mã QR thiết bị...';
                 }).catch(err => {
                     console.warn("Camera start error:", err);
-                    if (statusEl) statusEl.textContent = 'Không mở được camera. Dùng ô nhập mã bên dưới.';
                 });
             } catch (e) {
                 console.error(e);
@@ -1310,25 +1460,17 @@
         function switchCamera() {
             stopScanner();
             currentCameraFacing = currentCameraFacing === "environment" ? "user" : "environment";
-            setTimeout(startScanner, 300);
-        }
-
-        function toggleFlashlight() {
-            // Flashlight support if torch constraint available
+            setTimeout(startScanner, 250);
         }
 
         function onQrCodeScanned(decodedText, decodedResult) {
             playSuccessBeep();
-            if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
-
-            const statusEl = document.getElementById('scanStatusText');
-            if (statusEl) statusEl.textContent = `Đã tìm thấy: ${decodedText}`;
-
+            if (navigator.vibrate) navigator.vibrate([70, 40, 70]);
             lookupAssetByCode(decodedText);
         }
 
         function onQrScanError(errorMessage) {
-            // silent parse frame errors
+            // silent parse
         }
 
         function scanQRFromImage(event) {
@@ -1336,7 +1478,7 @@
             if (!file) return;
 
             if (typeof Html5Qrcode === 'undefined') {
-                alert('Thư viện quét chưa tải xong.');
+                alert('Thư viện quét chưa sẵn sàng.');
                 return;
             }
 
@@ -1347,7 +1489,7 @@
                     lookupAssetByCode(decodedText);
                 })
                 .catch(err => {
-                    alert('Không tìm thấy mã QR hợp lệ trong ảnh: ' + err);
+                    alert('Không tìm thấy mã QR trong ảnh: ' + err);
                 });
         }
 
@@ -1367,7 +1509,7 @@
 
             document.getElementById('assetDetailCode').textContent = code;
             document.getElementById('assetDetailName').textContent = 'Đang tra cứu thiết bị...';
-            body.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div><div class="small mt-2">Đang lấy dữ liệu từ máy chủ...</div></div>`;
+            body.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div><div class="small mt-2">Đang tải thông tin thiết bị...</div></div>`;
             modal.show();
 
             fetch(`${BASE_URL}/mobile/api/asset-scan/${encodeURIComponent(code)}`)
@@ -1378,7 +1520,7 @@
                             <div class="alert alert-warning small text-center p-3">
                                 <i class="bi bi-question-circle fs-3 d-block mb-2 text-warning"></i>
                                 <strong>Không tìm thấy thiết bị!</strong><br>
-                                Mã QR: <span class="font-monospace">${escapeHtml(code)}</span> không tồn tại trong hệ thống.
+                                Mã QR: <span class="font-monospace">${escapeHtml(code)}</span> không tồn tại trong hệ thống ITAM.
                             </div>
                         `;
                         return;
@@ -1389,7 +1531,6 @@
                     document.getElementById('assetDetailCode').textContent = a.asset_code;
                     document.getElementById('assetDetailName').textContent = a.name;
 
-                    // Configure report button
                     const btnReport = document.getElementById('btnReportAssetIncident');
                     if (btnReport) {
                         btnReport.onclick = function() {
@@ -1399,31 +1540,31 @@
                     }
 
                     body.innerHTML = `
-                        <div class="p-3 bg-light rounded-4 mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="badge bg-primary-subtle text-primary fw-bold font-monospace">${escapeHtml(a.asset_code)}</span>
-                                <span class="badge bg-success-subtle text-success fw-bold">${escapeHtml(a.status || 'Đang sử dụng')}</span>
+                        <div class="p-3 bg-light rounded-3 mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="ticket-code">${escapeHtml(a.asset_code)}</span>
+                                <span class="pill-status pill-resolved">${escapeHtml(a.status || 'Đang sử dụng')}</span>
                             </div>
                             <h6 class="fw-bold text-dark mb-1">${escapeHtml(a.name)}</h6>
                             <div class="text-muted small"><i class="bi bi-tag me-1"></i> ${escapeHtml(a.category_name || 'Thiết bị IT')}</div>
                         </div>
 
-                        <div class="card-custom p-3 mb-2">
+                        <div class="bg-white border rounded-3 p-3">
                             <div class="row g-2 small">
                                 <div class="col-6">
-                                    <span class="text-muted">Model / Nhãn hiệu:</span><br>
-                                    <strong class="text-dark">${escapeHtml(a.model || 'Chưa cập nhật')}</strong>
+                                    <span class="text-muted">Model:</span><br>
+                                    <strong class="text-dark">${escapeHtml(a.model || 'N/A')}</strong>
                                 </div>
                                 <div class="col-6">
-                                    <span class="text-muted">Số Serial:</span><br>
+                                    <span class="text-muted">Serial:</span><br>
                                     <strong class="text-dark font-monospace">${escapeHtml(a.serial_number || 'N/A')}</strong>
                                 </div>
                                 <div class="col-6 mt-2">
-                                    <span class="text-muted">Người đang sử dụng:</span><br>
+                                    <span class="text-muted">Người sử dụng:</span><br>
                                     <strong class="text-primary">${escapeHtml(a.current_user_name || 'Chưa bàn giao')}</strong>
                                 </div>
                                 <div class="col-6 mt-2">
-                                    <span class="text-muted">Vị trí thiết bị:</span><br>
+                                    <span class="text-muted">Vị trí:</span><br>
                                     <strong class="text-dark">${escapeHtml(a.location || 'Tại văn phòng')}</strong>
                                 </div>
                             </div>
@@ -1444,26 +1585,26 @@
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
                 gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
                 osc.connect(gain);
                 gain.connect(ctx.destination);
                 osc.start();
-                osc.stop(ctx.currentTime + 0.15);
+                osc.stop(ctx.currentTime + 0.12);
             } catch (e) {}
         }
 
         function getStatusBadgeHtml(status) {
             const map = {
-                'NEW': '<span class="badge-status badge-new"><i class="bi bi-dot"></i>Mới</span>',
-                'ASSIGNED': '<span class="badge-status badge-assigned"><i class="bi bi-person"></i>Đã phân công</span>',
-                'IN_PROGRESS': '<span class="badge-status badge-progress"><i class="bi bi-arrow-repeat"></i>Đang xử lý</span>',
-                'PENDING_APPROVAL': '<span class="badge-status badge-pending"><i class="bi bi-shield-exclamation"></i>Chờ duyệt</span>',
-                'RESOLVED': '<span class="badge-status badge-resolved"><i class="bi bi-check2"></i>Đã giải quyết</span>',
-                'CLOSED': '<span class="badge-status badge-closed"><i class="bi bi-lock"></i>Đã đóng</span>'
+                'NEW': '<span class="pill-status pill-new">● Mới</span>',
+                'ASSIGNED': '<span class="pill-status pill-new">● Đã nhận</span>',
+                'IN_PROGRESS': '<span class="pill-status pill-progress">● Đang xử lý</span>',
+                'PENDING_APPROVAL': '<span class="pill-status pill-pending">● Chờ duyệt</span>',
+                'RESOLVED': '<span class="pill-status pill-resolved">● Đã xong</span>',
+                'CLOSED': '<span class="pill-status pill-closed">● Đã đóng</span>'
             };
-            return map[status] || `<span class="badge bg-secondary">${status}</span>`;
+            return map[status] || `<span class="pill-status pill-closed">${status}</span>`;
         }
 
         function formatDate(dStr) {

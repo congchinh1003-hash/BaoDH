@@ -393,9 +393,12 @@ class MobileController extends Controller
      */
     public function downloadApk(Request $request, Response $response): void
     {
-        $apkPath = dirname(__DIR__, 2) . '/public/TaskFlow-v1.0.apk';
+        $apkPath = dirname(__DIR__, 2) . '/public/TaskFlow-v1.1.apk';
         if (!file_exists($apkPath)) {
-            $apkPath = dirname(__DIR__, 2) . '/TaskFlow-v1.0.apk';
+            $apkPath = dirname(__DIR__, 2) . '/TaskFlow-v1.1.apk';
+        }
+        if (!file_exists($apkPath)) {
+            $apkPath = dirname(__DIR__, 2) . '/public/TaskFlow-v1.0.apk';
         }
 
         if (!file_exists($apkPath)) {
@@ -405,7 +408,7 @@ class MobileController extends Controller
 
         header('Content-Description: File Transfer');
         header('Content-Type: application/vnd.android.package-archive');
-        header('Content-Disposition: attachment; filename="TaskFlow-v1.0.apk"');
+        header('Content-Disposition: attachment; filename="TaskFlow-v1.1.apk"');
         header('Expires: 0');
         header('Cache-Control: must-revalidate');
         header('Pragma: public');
