@@ -94,6 +94,17 @@ $usersList = $allUsers ?? [];
     </button>
 </form>
 
+<!-- Mobile & Device Simulator Quick Links -->
+<div class="d-flex align-items-center justify-content-between px-3 py-2 mt-3 mb-2 bg-light rounded-3 border" style="font-size: 0.82rem;">
+    <a href="<?= $baseUrl ?>/mobile/login" class="text-decoration-none fw-bold text-primary d-flex align-items-center gap-1">
+        <i class="bi bi-phone"></i> Giao diện Mobile
+    </a>
+    <span class="text-muted">·</span>
+    <a href="<?= $baseUrl ?>/simulator" class="text-decoration-none fw-bold text-success d-flex align-items-center gap-1" target="_blank">
+        <i class="bi bi-display"></i> Giả lập thiết bị (Studio) <i class="bi bi-arrow-up-right small"></i>
+    </a>
+</div>
+
 <!-- Quick Role Demo Selector (Interactive 2x2 Grid) -->
 <div class="quick-roles-wrap">
     <div class="quick-roles-title">

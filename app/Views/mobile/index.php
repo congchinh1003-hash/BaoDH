@@ -797,6 +797,16 @@
                 </div>
                 <i class="bi bi-download text-muted"></i>
             </a>
+            <a href="<?= $baseUrl ?? '' ?>/simulator" target="_blank" class="d-flex align-items-center justify-content-between p-3 text-decoration-none text-dark border-bottom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3"><i class="bi bi-display fs-5"></i></div>
+                    <div>
+                        <div class="fw-bold small">Giả Lập Thiết Bị (Studio)</div>
+                        <div class="text-muted" style="font-size:0.72rem;">iPhone 18, Samsung S25, iPad Pro</div>
+                    </div>
+                </div>
+                <i class="bi bi-box-arrow-up-right text-muted"></i>
+            </a>
             <a href="<?= $baseUrl ?? '' ?>/logout" class="d-flex align-items-center justify-content-between p-3 text-decoration-none text-danger">
                 <div class="d-flex align-items-center gap-3">
                     <div class="p-2 bg-danger bg-opacity-10 text-danger rounded-3"><i class="bi bi-box-arrow-right fs-5"></i></div>

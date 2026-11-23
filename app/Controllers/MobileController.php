@@ -6,6 +6,7 @@ use App\Core\Auth;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Session;
 use App\Models\Approval;
 use App\Models\Asset;
 use App\Models\Category;
@@ -445,5 +446,46 @@ class MobileController extends Controller
         header('Content-Length: ' . filesize($apkPath));
         readfile($apkPath);
         exit;
+    }
+
+    /**
+     * Mobile Login Page
+     */
+    public function showLogin(Request $request, Response $response): string
+    {
+        if (Auth::check()) {
+            $response->redirect('/mobile');
+            return '';
+        }
+
+        $allUsers = $this->db->query('
+            SELECT u.id, u.username, u.email, u.full_name, u.department, 
+                   COALESCE(GROUP_CONCAT(r.code SEPARATOR ", "), "USER") as roles, 
+                   COALESCE(GROUP_CONCAT(r.name SEPARATOR ", "), "End User") as role_names 
+            FROM users u 
+            LEFT JOIN user_roles ur ON u.id = ur.user_id 
+            LEFT JOIN roles r ON ur.role_id = r.id 
+            WHERE u.is_active = 1
+            GROUP BY u.id 
+            ORDER BY u.id ASC
+        ')->fetchAll(\PDO::FETCH_ASSOC);
+
+        return $this->render('mobile/login', [
+            'pageTitle' => 'TaskFlow - Đăng Nhập Di Động',
+            'allUsers'  => $allUsers,
+            'flashes'   => Session::getFlashes()
+        ], '');
+    }
+
+    /**
+     * Device Simulator Studio (Desktop)
+     */
+    public function simulator(Request $request, Response $response): string
+    {
+        $targetPage = $request->input('page', '/mobile');
+        return $this->render('mobile/simulator', [
+            'pageTitle'  => 'TaskFlow - Phòng Giả Lập Thiết Bị (Device Studio)',
+            'targetPage' => $targetPage
+        ], '');
     }
 }

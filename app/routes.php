@@ -320,5 +320,10 @@ $router->get('/TaskFlow-v1.1.apk', [MobileController::class, 'downloadApk']);
 $router->get('/TaskFlow-v1.0.apk', [MobileController::class, 'downloadApk']);
 $router->get('/mobile/download-apk', [MobileController::class, 'downloadApk']);
 
+// MOBILE LOGIN & DEVICE SIMULATOR STUDIO
+$router->get('/mobile/login', [MobileController::class, 'showLogin']);
+$router->get('/simulator', [MobileController::class, 'simulator']);
+$router->get('/mobile/simulator', [MobileController::class, 'simulator']);
+
 
 

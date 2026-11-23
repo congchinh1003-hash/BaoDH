@@ -24,6 +24,25 @@ class AuthController extends Controller
             return '';
         }
 
+        // Detect if mobile client or requested mobile view
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $isMobileClient = str_contains($ua, 'TaskFlowMobileApp') 
+                       || str_contains($ua, 'Mobile') 
+                       || str_contains($ua, 'Android') 
+                       || str_contains($ua, 'iPhone')
+                       || $request->input('view') === 'mobile'
+                       || $request->input('mobile') === '1';
+
+        // Explicit desktop override parameter (?view=desktop)
+        if ($request->input('view') === 'desktop') {
+            $isMobileClient = false;
+        }
+
+        if ($isMobileClient) {
+            $mobileController = new MobileController();
+            return $mobileController->showLogin($request, $response);
+        }
+
         $db = \App\Core\Database::getConnection();
         $allUsers = $db->query('
             SELECT u.id, u.username, u.email, u.full_name, u.department, 
@@ -81,9 +100,13 @@ class AuthController extends Controller
             return;
         }
 
-        // If inside Mobile App (User-Agent has TaskFlowMobileApp or Mobile) -> Always redirect to /mobile
+        // If inside Mobile App (User-Agent has TaskFlowMobileApp or form sent is_mobile) -> Always redirect to /mobile
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        if (str_contains($ua, 'TaskFlowMobileApp')) {
+        $isMobileClient = str_contains($ua, 'TaskFlowMobileApp') 
+                       || !empty($body['is_mobile']) 
+                       || $request->input('is_mobile') === '1';
+
+        if ($isMobileClient) {
             $response->redirect('/mobile');
             return;
         }
