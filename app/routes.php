@@ -298,4 +298,15 @@ $router->post('/remote-support/vnc/respond', [RemoteSupportController::class, 'v
 $router->get('/remote-support/vnc/session-status/{id}', [RemoteSupportController::class, 'vncSessionStatus'], [AuthMiddleware::class]);
 $router->post('/remote-support/vnc/end', [RemoteSupportController::class, 'vncEnd'], [AuthMiddleware::class]);
 
+// MOBILE APP & WEBVIEW EMBEDDED INTERFACE
+use App\Controllers\MobileController;
+$router->get('/mobile', [MobileController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/mobile/api/tickets', [MobileController::class, 'apiTickets'], [AuthMiddleware::class]);
+$router->get('/mobile/api/tickets/{id}', [MobileController::class, 'apiTicketDetail'], [AuthMiddleware::class]);
+$router->post('/mobile/api/tickets/create', [MobileController::class, 'apiCreateTicket'], [AuthMiddleware::class]);
+$router->get('/mobile/api/approvals', [MobileController::class, 'apiApprovals'], [AuthMiddleware::class]);
+$router->post('/mobile/api/approvals/decide', [MobileController::class, 'apiDecideApproval'], [AuthMiddleware::class]);
+$router->get('/mobile/api/asset-scan/{code}', [MobileController::class, 'apiScanAsset'], [AuthMiddleware::class]);
+
+
 

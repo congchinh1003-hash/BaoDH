@@ -298,6 +298,7 @@ if (isset($project) && !empty($project['id'])) {
                     <li><a class="dropdown-item small py-2" href="<?= $baseUrl ?>/dashboard"><i class="bi bi-speedometer2 me-2"></i> Dashboard của tôi</a></li>
                     <li><a class="dropdown-item small py-2" href="<?= $baseUrl ?>/profile"><i class="bi bi-person-circle me-2 text-primary"></i> Hồ sơ cá nhân (Profile)</a></li>
                     <li><a class="dropdown-item small py-2" href="<?= $baseUrl ?>/my-assets"><i class="bi bi-laptop me-2"></i> Thiết bị của tôi</a></li>
+                    <li><a class="dropdown-item small py-2 fw-bold text-primary" href="<?= $baseUrl ?>/mobile"><i class="bi bi-phone me-2"></i> Giao diện Mobile App</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item small text-danger py-2" href="<?= $baseUrl ?>/logout"><i class="bi bi-box-arrow-right me-2"></i> <?= __('menu.logout') ?></a></li>
                 </ul>

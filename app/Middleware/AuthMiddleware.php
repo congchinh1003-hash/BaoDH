@@ -17,9 +17,9 @@ class AuthMiddleware
                 return;
             }
 
-            // ONLY store return_url if user is accessing an asset via QR code scan (/asset/{code})
+            // Store return_url if user is accessing an asset via QR code scan (/asset/{code}) or mobile view (/mobile)
             $path = $request->getPath();
-            if (str_starts_with($path, '/asset/')) {
+            if (str_starts_with($path, '/asset/') || str_starts_with($path, '/mobile')) {
                 Session::set('return_url', $path);
             } else {
                 Session::remove('return_url');
