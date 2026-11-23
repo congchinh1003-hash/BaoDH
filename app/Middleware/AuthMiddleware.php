@@ -23,6 +23,8 @@ class AuthMiddleware
             // Always store /mobile for mobile app sessions or /mobile paths
             if ($isMobileApp || str_starts_with($path, '/mobile')) {
                 Session::set('return_url', '/mobile');
+                $response->redirect('/login?view=mobile');
+                return;
             } elseif (str_starts_with($path, '/asset/')) {
                 Session::set('return_url', $path);
             } else {

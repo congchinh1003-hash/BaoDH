@@ -482,7 +482,8 @@ class MobileController extends Controller
      */
     public function simulator(Request $request, Response $response): string
     {
-        $targetPage = $request->input('page', '/mobile');
+        $defaultPage = Auth::check() ? '/mobile' : '/mobile/login';
+        $targetPage = $request->input('page', $defaultPage);
         return $this->render('mobile/simulator', [
             'pageTitle'  => 'TaskFlow - Phòng Giả Lập Thiết Bị (Device Studio)',
             'targetPage' => $targetPage

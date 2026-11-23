@@ -26,12 +26,17 @@ class AuthController extends Controller
 
         // Detect if mobile client or requested mobile view
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $returnUrl = Session::get('return_url');
         $isMobileClient = str_contains($ua, 'TaskFlowMobileApp') 
                        || str_contains($ua, 'Mobile') 
                        || str_contains($ua, 'Android') 
                        || str_contains($ua, 'iPhone')
                        || $request->input('view') === 'mobile'
-                       || $request->input('mobile') === '1';
+                       || $request->input('mobile') === '1'
+                       || ($returnUrl && is_string($returnUrl) && str_starts_with($returnUrl, '/mobile'))
+                       || str_contains($referer, '/simulator')
+                       || str_contains($referer, '/mobile');
 
         // Explicit desktop override parameter (?view=desktop)
         if ($request->input('view') === 'desktop') {

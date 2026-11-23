@@ -1,8 +1,10 @@
 <?php
 use App\Core\Response;
+use App\Core\Auth;
 
 $baseUrl = Response::baseUrl();
-$initialPage = $targetPage ?? '/mobile';
+$isLoggedIn = Auth::check();
+$initialPage = $targetPage ?? ($isLoggedIn ? '/mobile' : '/mobile/login');
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -22,8 +24,8 @@ $initialPage = $targetPage ?? '/mobile';
 
     <style>
         :root {
-            --studio-bg: #0b0f19;
-            --studio-card: #131b2e;
+            --studio-bg: #090d16;
+            --studio-card: #111726;
             --studio-border: rgba(255, 255, 255, 0.08);
             --studio-text: #f1f5f9;
             --studio-subtext: #94a3b8;
@@ -32,7 +34,7 @@ $initialPage = $targetPage ?? '/mobile';
         }
 
         body.light-mode {
-            --studio-bg: #eef2f6;
+            --studio-bg: #e2e8f0;
             --studio-card: #ffffff;
             --studio-border: rgba(0, 0, 0, 0.08);
             --studio-text: #0f172a;
@@ -62,30 +64,30 @@ $initialPage = $targetPage ?? '/mobile';
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 18px;
             position: relative;
             z-index: 100;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
         }
 
         .studio-brand {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             text-decoration: none;
             color: var(--studio-text);
         }
 
         .studio-logo-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 11px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             background: linear-gradient(135deg, #0C66E4 0%, #4f46e5 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: #ffffff;
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             box-shadow: 0 4px 12px var(--primary-glow);
         }
 
@@ -94,7 +96,7 @@ $initialPage = $targetPage ?? '/mobile';
         }
 
         .studio-title {
-            font-size: 0.98rem;
+            font-size: 0.95rem;
             font-weight: 800;
             letter-spacing: -0.01em;
         }
@@ -114,11 +116,11 @@ $initialPage = $targetPage ?? '/mobile';
         .studio-controls {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .segmented-group {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.25);
             border: 1px solid var(--studio-border);
             border-radius: 12px;
             padding: 3px;
@@ -134,15 +136,16 @@ $initialPage = $targetPage ?? '/mobile';
             background: transparent;
             border: none;
             color: var(--studio-subtext);
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 600;
-            padding: 6px 14px;
-            border-radius: 9px;
+            padding: 5px 12px;
+            border-radius: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             transition: all 0.15s ease;
+            white-space: nowrap;
         }
 
         .seg-btn:hover {
@@ -156,12 +159,12 @@ $initialPage = $targetPage ?? '/mobile';
         }
 
         .tool-icon-btn {
-            background: rgba(0, 0, 0, 0.15);
+            background: rgba(0, 0, 0, 0.2);
             border: 1px solid var(--studio-border);
             color: var(--studio-subtext);
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -179,15 +182,14 @@ $initialPage = $targetPage ?? '/mobile';
             border-color: var(--primary);
         }
 
-        /* Page Quick Jumper Select */
         .page-jumper-select {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.25);
             border: 1px solid var(--studio-border);
             color: var(--studio-text);
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             font-weight: 600;
-            padding: 6px 12px;
-            border-radius: 10px;
+            padding: 5px 10px;
+            border-radius: 9px;
             outline: none;
             cursor: pointer;
         }
@@ -205,7 +207,7 @@ $initialPage = $targetPage ?? '/mobile';
             align-items: center;
             justify-content: center;
             position: relative;
-            padding: 40px;
+            padding: 30px;
             background-image: 
                 radial-gradient(circle at 50% 50%, rgba(12, 102, 228, 0.05) 0%, transparent 60%),
                 radial-gradient(circle at 10% 90%, rgba(99, 102, 241, 0.03) 0%, transparent 40%);
@@ -235,7 +237,6 @@ $initialPage = $targetPage ?? '/mobile';
                 0 30px 70px rgba(0, 0, 0, 0.65);
         }
 
-        /* Titanium spec highlights */
         .frame-iphone::before {
             content: '';
             position: absolute;
@@ -245,7 +246,6 @@ $initialPage = $targetPage ?? '/mobile';
             pointer-events: none;
         }
 
-        /* iPhone Hardware Buttons */
         .iphone-btn-silent {
             position: absolute;
             left: -17px;
@@ -323,14 +323,13 @@ $initialPage = $targetPage ?? '/mobile';
             background: #06080e;
         }
 
-        /* iOS Status Bar Overlay */
         .ios-status-bar {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 50px;
-            padding: 13px 26px 0;
+            height: 48px;
+            padding: 12px 26px 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -341,13 +340,6 @@ $initialPage = $targetPage ?? '/mobile';
             pointer-events: none;
         }
 
-        .ios-status-bar.dark-text {
-            color: #000000;
-        }
-        .ios-status-bar.light-text {
-            color: #ffffff;
-        }
-
         .ios-home-indicator {
             position: absolute;
             bottom: 8px;
@@ -355,7 +347,7 @@ $initialPage = $targetPage ?? '/mobile';
             transform: translateX(-50%);
             width: 138px;
             height: 5px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.65);
             border-radius: 999px;
             z-index: 50;
             pointer-events: none;
@@ -405,7 +397,6 @@ $initialPage = $targetPage ?? '/mobile';
             border-radius: 0 2px 2px 0;
         }
 
-        /* Punch Hole Camera */
         .punch-hole-cam {
             position: absolute;
             top: 10px;
@@ -443,7 +434,7 @@ $initialPage = $targetPage ?? '/mobile';
             left: 0;
             right: 0;
             height: 40px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.96);
             border-top: 1px solid rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
@@ -471,13 +462,13 @@ $initialPage = $targetPage ?? '/mobile';
         }
 
         /* ========================================================================= */
-        /* DEVICE 3: APPLE iPAD PRO 11" (Tablet)                                     */
+        /* DEVICE 3: APPLE iPAD PRO (NGANG - LANDSCAPE DEFAULT)                      */
         /* ========================================================================= */
-        .frame-ipad {
-            width: 820px;
-            height: 1180px;
+        .frame-ipad-landscape {
+            width: 1180px;
+            height: 820px;
             background: #000000;
-            border-radius: 38px;
+            border-radius: 36px;
             position: relative;
             box-shadow: 
                 0 0 0 16px #1e2229,
@@ -486,7 +477,7 @@ $initialPage = $targetPage ?? '/mobile';
                 0 35px 80px rgba(0, 0, 0, 0.7);
         }
 
-        .ipad-cam-notch {
+        .ipad-cam-notch-top {
             position: absolute;
             top: 7px;
             left: 50%;
@@ -500,6 +491,122 @@ $initialPage = $targetPage ?? '/mobile';
             pointer-events: none;
         }
 
+        .ipad-landscape-status {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 38px;
+            padding: 8px 30px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #000000;
+            font-size: 0.82rem;
+            font-weight: 700;
+            z-index: 40;
+            pointer-events: none;
+        }
+
+        .ipad-home-bar {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 5px;
+            background: rgba(0, 0, 0, 0.65);
+            border-radius: 999px;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* ========================================================================= */
+        /* DEVICE 4: iPHONE DUO (MÀN HÌNH KÉP GẬP DUAL SCREEN)                       */
+        /* ========================================================================= */
+        .frame-duo {
+            width: 880px;
+            height: 860px;
+            background: #000000;
+            border-radius: 44px;
+            position: relative;
+            display: flex;
+            box-shadow: 
+                0 0 0 12px #202328,
+                0 0 0 14px #3d434f,
+                0 0 0 16px #16181c,
+                0 35px 85px rgba(0, 0, 0, 0.75);
+        }
+
+        .frame-duo::before {
+            content: '';
+            position: absolute;
+            inset: -15px;
+            border-radius: 56px;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+        }
+
+        .duo-half {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .duo-half-left {
+            border-top-left-radius: 36px;
+            border-bottom-left-radius: 36px;
+        }
+
+        .duo-half-right {
+            border-top-right-radius: 36px;
+            border-bottom-right-radius: 36px;
+        }
+
+        .duo-hinge {
+            width: 24px;
+            height: 100%;
+            background: linear-gradient(90deg, #18191d 0%, #3a3e47 25%, #646a78 50%, #3a3e47 75%, #18191d 100%);
+            position: relative;
+            z-index: 60;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 0;
+        }
+
+        .duo-hinge-screw {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #252830;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: inset 0 1px 2px #000;
+        }
+
+        .duo-screen-tag {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.85);
+            color: #ffffff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 999px;
+            z-index: 55;
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            letter-spacing: 0.02em;
+        }
+
         /* Common Screen Iframe */
         .device-screen-container {
             width: 100%;
@@ -510,7 +617,7 @@ $initialPage = $targetPage ?? '/mobile';
             background: #ffffff;
         }
 
-        #simulatorIframe {
+        #simulatorIframe, #simulatorIframeRight {
             width: 100%;
             height: 100%;
             border: none;
@@ -543,7 +650,8 @@ $initialPage = $targetPage ?? '/mobile';
         /* Frameless mode option */
         .device-wrapper.frameless .frame-iphone,
         .device-wrapper.frameless .frame-samsung,
-        .device-wrapper.frameless .frame-ipad {
+        .device-wrapper.frameless .frame-ipad-landscape,
+        .device-wrapper.frameless .frame-duo {
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2) !important;
             border: 1px solid var(--studio-border) !important;
         }
@@ -577,40 +685,44 @@ $initialPage = $targetPage ?? '/mobile';
 
         <!-- Center Controls: Device Switcher -->
         <div class="studio-controls">
-            <!-- Devices -->
+            <!-- 4 Devices: iPhone, Samsung, iPad Ngang, iPhone Duo -->
             <div class="segmented-group">
                 <button class="seg-btn active" id="btnDevIphone" onclick="switchDevice('iphone')">
-                    <i class="bi bi-apple"></i> iPhone 18 Pro Max
+                    <i class="bi bi-apple"></i> iPhone 18 Pro
                 </button>
                 <button class="seg-btn" id="btnDevSamsung" onclick="switchDevice('samsung')">
-                    <i class="bi bi-android2"></i> Galaxy S25 Ultra
+                    <i class="bi bi-android2"></i> Galaxy S25
                 </button>
                 <button class="seg-btn" id="btnDevIpad" onclick="switchDevice('ipad')">
-                    <i class="bi bi-tablet"></i> iPad Pro 11"
+                    <i class="bi bi-tablet-landscape"></i> iPad Pro (Ngang)
+                </button>
+                <button class="seg-btn" id="btnDevDuo" onclick="switchDevice('duo')">
+                    <i class="bi bi-book-half"></i> iPhone Duo (Màn Kép)
                 </button>
             </div>
 
             <!-- Page Quick Jumper -->
-            <select class="page-jumper-select ms-2" id="pageJumper" onchange="changeIframePage(this.value)">
-                <option value="<?= $baseUrl ?>/mobile">📱 App Chính (Yêu Cầu & Quét QR)</option>
-                <option value="<?= $baseUrl ?>/mobile/login">🔐 Màn Hình Đăng Nhập Mobile</option>
-                <option value="<?= $baseUrl ?>/login?view=desktop">💻 Màn Hình Đăng Nhập Web Desktop</option>
+            <select class="page-jumper-select ms-1" id="pageJumper" onchange="changeIframePage(this.value)">
+                <option value="<?= $baseUrl ?>/mobile">📱 Giao Diện App Chính (/mobile)</option>
+                <option value="<?= $baseUrl ?>/mobile/login">🔐 Màn Hình Đăng Nhập (/mobile/login)</option>
+                <option value="<?= $baseUrl ?>/login?view=desktop">💻 Đăng Nhập Desktop (/login)</option>
             </select>
 
             <!-- Zoom / Scale Selector -->
-            <div class="segmented-group ms-2">
-                <button class="seg-btn" onclick="setStudioScale(0.7)">70%</button>
+            <div class="segmented-group ms-1">
+                <button class="seg-btn" onclick="setStudioScale(0.65)">65%</button>
+                <button class="seg-btn" id="btnScale75" onclick="setStudioScale(0.75)">75%</button>
                 <button class="seg-btn active" id="btnScale85" onclick="setStudioScale(0.85)">85%</button>
                 <button class="seg-btn" onclick="setStudioScale(1.0)">100%</button>
             </div>
 
-            <!-- Orientation -->
-            <button class="tool-icon-btn ms-1" id="btnOrientation" onclick="toggleOrientation()" title="Xoay dọc / xoay ngang">
+            <!-- Orientation (For iPhone/Samsung) -->
+            <button class="tool-icon-btn ms-1" id="btnOrientation" onclick="toggleOrientation()" title="Xoay dọc / xoay ngang thiết bị">
                 <i class="bi bi-phone-landscape"></i>
             </button>
 
             <!-- Reload Frame -->
-            <button class="tool-icon-btn" onclick="reloadFrame()" title="Làm mới lại màn hình app">
+            <button class="tool-icon-btn" onclick="reloadFrame()" title="Làm mới lại dữ liệu app">
                 <i class="bi bi-arrow-clockwise"></i>
             </button>
 
@@ -640,13 +752,13 @@ $initialPage = $targetPage ?? '/mobile';
     <main class="studio-stage" id="studioStage">
         <div class="device-wrapper" id="deviceWrapper" style="transform: scale(0.85);">
             
-            <!-- FRAME: iPHONE 18 PRO MAX -->
+            <!-- 1. SINGLE DEVICE CONTAINER (iPhone, Samsung, iPad) -->
             <div class="frame-iphone" id="deviceFrame">
-                <!-- Hardware buttons -->
-                <div class="iphone-btn-silent"></div>
-                <div class="iphone-btn-vol-up"></div>
-                <div class="iphone-btn-vol-down"></div>
-                <div class="iphone-btn-power"></div>
+                <!-- iPhone Hardware buttons -->
+                <div class="iphone-btn-silent" id="iphoneBtnSilent"></div>
+                <div class="iphone-btn-vol-up" id="iphoneBtnVolUp"></div>
+                <div class="iphone-btn-vol-down" id="iphoneBtnVolDown"></div>
+                <div class="iphone-btn-power" id="iphoneBtnPower"></div>
 
                 <!-- Dynamic Island (iOS) -->
                 <div class="dynamic-island" id="dynamicIsland" title="Dynamic Island - Chạm để xem">
@@ -665,10 +777,10 @@ $initialPage = $targetPage ?? '/mobile';
                     </div>
                 </div>
 
-                <!-- Punch Hole Camera (Samsung only, toggled via JS) -->
+                <!-- Punch Hole Camera (Samsung only) -->
                 <div class="punch-hole-cam d-none" id="samsungPunchHole"></div>
 
-                <!-- Android Status Bar (Samsung only, toggled via JS) -->
+                <!-- Android Status Bar (Samsung only) -->
                 <div class="android-status-bar d-none" id="androidStatusBar">
                     <div class="d-flex align-items-center gap-2">
                         <span id="liveClockAndroid">09:41</span>
@@ -681,16 +793,27 @@ $initialPage = $targetPage ?? '/mobile';
                     </div>
                 </div>
 
-                <!-- iPad Camera (toggled via JS) -->
-                <div class="ipad-cam-notch d-none" id="ipadCam"></div>
+                <!-- iPad Camera & Status (iPad Landscape only) -->
+                <div class="ipad-cam-notch-top d-none" id="ipadCam"></div>
+                <div class="ipad-landscape-status d-none" id="ipadStatus">
+                    <span id="liveClockIpad">9:41 SA · Thứ Hai</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-wifi"></i>
+                        <span style="font-size:0.78rem;">100%</span>
+                        <i class="bi bi-battery-full fs-6"></i>
+                    </div>
+                </div>
 
-                <!-- Screen Iframe Container -->
-                <div class="device-screen-container">
+                <!-- Single Device Screen Container -->
+                <div class="device-screen-container" id="singleScreenContainer">
                     <iframe id="simulatorIframe" src="<?= htmlspecialchars($initialPage) ?>" allow="camera; microphone; geolocation"></iframe>
                 </div>
 
                 <!-- iOS Home Indicator -->
                 <div class="ios-home-indicator" id="iosHomeIndicator"></div>
+
+                <!-- iPad Home Indicator -->
+                <div class="ipad-home-bar d-none" id="ipadHomeIndicator"></div>
 
                 <!-- Android Bottom Nav Bar (Samsung only) -->
                 <div class="android-nav-bar d-none" id="androidNavBar">
@@ -706,6 +829,36 @@ $initialPage = $targetPage ?? '/mobile';
                 </div>
             </div>
 
+            <!-- 2. iPHONE DUO CONTAINER (MÀN HÌNH KÉP SONG SONG) -->
+            <div class="frame-duo d-none" id="duoFrame">
+                <!-- Left Screen (Màn hình 1) -->
+                <div class="duo-half duo-half-left">
+                    <div class="duo-screen-tag">
+                        <i class="bi bi-person-fill"></i> Màn hình 1 (Gửi yêu cầu)
+                    </div>
+                    <iframe id="simulatorIframeLeft" src="<?= htmlspecialchars($initialPage) ?>" allow="camera; microphone; geolocation" style="width:100%; height:100%; border:none;"></iframe>
+                    <div class="ios-home-indicator" style="bottom:6px;"></div>
+                </div>
+
+                <!-- Center Titanium Hinge -->
+                <div class="duo-hinge">
+                    <div class="duo-hinge-screw"></div>
+                    <div class="duo-hinge-screw"></div>
+                    <div class="duo-hinge-screw"></div>
+                    <div class="duo-hinge-screw"></div>
+                    <div class="duo-hinge-screw"></div>
+                </div>
+
+                <!-- Right Screen (Màn hình 2) -->
+                <div class="duo-half duo-half-right">
+                    <div class="duo-screen-tag">
+                        <i class="bi bi-patch-check-fill text-warning"></i> Màn hình 2 (Phê duyệt & QR)
+                    </div>
+                    <iframe id="simulatorIframeRight" src="<?= htmlspecialchars($initialPage) ?>" allow="camera; microphone; geolocation" style="width:100%; height:100%; border:none;"></iframe>
+                    <div class="ios-home-indicator" style="bottom:6px;"></div>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -713,8 +866,8 @@ $initialPage = $targetPage ?? '/mobile';
     <div class="specs-pill">
         <div>Thiết bị: <strong id="specDeviceName">iPhone 18 Pro Max</strong></div>
         <div>Màn hình: <strong id="specResolution">430 × 932 px</strong></div>
-        <div>Tỷ lệ: <strong id="specDpr">3.0x Super Retina</strong></div>
-        <div>Trạng thái: <span class="badge bg-success bg-opacity-25 text-success">Trực tiếp</span></div>
+        <div>Độ phân giải: <strong id="specDpr">3.0x Super Retina</strong></div>
+        <div>Dữ liệu: <span class="badge bg-success bg-opacity-25 text-success">Dữ liệu thật 100%</span></div>
     </div>
 
     <script>
@@ -723,9 +876,12 @@ $initialPage = $targetPage ?? '/mobile';
         let isLandscape = false;
         let isFrameless = false;
 
-        const frameEl = document.getElementById('deviceFrame');
+        const singleFrame = document.getElementById('deviceFrame');
+        const duoFrame = document.getElementById('duoFrame');
         const wrapperEl = document.getElementById('deviceWrapper');
         const iframeEl = document.getElementById('simulatorIframe');
+        const iframeLeft = document.getElementById('simulatorIframeLeft');
+        const iframeRight = document.getElementById('simulatorIframeRight');
 
         // Clock auto update
         function updateLiveClock() {
@@ -735,8 +891,10 @@ $initialPage = $targetPage ?? '/mobile';
             const timeStr = `${h}:${m}`;
             const iosClock = document.getElementById('liveClockIos');
             const androidClock = document.getElementById('liveClockAndroid');
+            const ipadClock = document.getElementById('liveClockIpad');
             if (iosClock) iosClock.textContent = timeStr;
             if (androidClock) androidClock.textContent = timeStr;
+            if (ipadClock) ipadClock.textContent = `${timeStr} SA · Thứ Hai`;
         }
         setInterval(updateLiveClock, 1000);
         updateLiveClock();
@@ -754,13 +912,35 @@ $initialPage = $targetPage ?? '/mobile';
             const androidStatus = document.getElementById('androidStatusBar');
             const androidNav = document.getElementById('androidNavBar');
             const ipadCam = document.getElementById('ipadCam');
+            const ipadStatus = document.getElementById('ipadStatus');
+            const ipadHomeBar = document.getElementById('ipadHomeIndicator');
 
-            // Reset classes
-            frameEl.className = '';
+            // Reset frame styles
+            singleFrame.style.width = '';
+            singleFrame.style.height = '';
+            singleFrame.className = '';
+
+            // Handle DUO device mode
+            if (devType === 'duo') {
+                document.getElementById('btnDevDuo').classList.add('active');
+                singleFrame.classList.add('d-none');
+                duoFrame.classList.remove('d-none');
+
+                document.getElementById('specDeviceName').textContent = 'iPhone Duo (Màn Hình Kép)';
+                document.getElementById('specResolution').textContent = '880 × 860 px (Dual 425px)';
+                document.getElementById('specDpr').textContent = '2x Super Retina XDR';
+
+                setStudioScale(0.72);
+                return;
+            }
+
+            // Normal single device mode
+            singleFrame.classList.remove('d-none');
+            duoFrame.classList.add('d-none');
 
             if (devType === 'iphone') {
                 document.getElementById('btnDevIphone').classList.add('active');
-                frameEl.classList.add('frame-iphone');
+                singleFrame.classList.add('frame-iphone');
                 dynamicIsland.classList.remove('d-none');
                 iosStatusBar.classList.remove('d-none');
                 iosHomeBar.classList.remove('d-none');
@@ -768,13 +948,16 @@ $initialPage = $targetPage ?? '/mobile';
                 androidStatus.classList.add('d-none');
                 androidNav.classList.add('d-none');
                 ipadCam.classList.add('d-none');
+                ipadStatus.classList.add('d-none');
+                ipadHomeBar.classList.add('d-none');
 
                 document.getElementById('specDeviceName').textContent = 'iPhone 18 Pro Max';
                 document.getElementById('specResolution').textContent = isLandscape ? '932 × 430 px' : '430 × 932 px';
                 document.getElementById('specDpr').textContent = '3.0x ProMotion 120Hz';
+                setStudioScale(0.85);
             } else if (devType === 'samsung') {
                 document.getElementById('btnDevSamsung').classList.add('active');
-                frameEl.classList.add('frame-samsung');
+                singleFrame.classList.add('frame-samsung');
                 dynamicIsland.classList.add('d-none');
                 iosStatusBar.classList.add('d-none');
                 iosHomeBar.classList.add('d-none');
@@ -782,29 +965,33 @@ $initialPage = $targetPage ?? '/mobile';
                 androidStatus.classList.remove('d-none');
                 androidNav.classList.remove('d-none');
                 ipadCam.classList.add('d-none');
+                ipadStatus.classList.add('d-none');
+                ipadHomeBar.classList.add('d-none');
 
                 document.getElementById('specDeviceName').textContent = 'Samsung Galaxy S25 Ultra';
                 document.getElementById('specResolution').textContent = isLandscape ? '915 × 412 px' : '412 × 915 px';
                 document.getElementById('specDpr').textContent = 'Dynamic AMOLED 2X';
+                setStudioScale(0.85);
             } else if (devType === 'ipad') {
+                // IPAD NGANG (LANDSCAPE DEFAULT)
                 document.getElementById('btnDevIpad').classList.add('active');
-                frameEl.classList.add('frame-ipad');
+                singleFrame.classList.add('frame-ipad-landscape');
                 dynamicIsland.classList.add('d-none');
                 iosStatusBar.classList.add('d-none');
-                iosHomeBar.classList.remove('d-none');
+                iosHomeBar.classList.add('d-none');
                 samsungCam.classList.add('d-none');
                 androidStatus.classList.add('d-none');
                 androidNav.classList.add('d-none');
                 ipadCam.classList.remove('d-none');
+                ipadStatus.classList.remove('d-none');
+                ipadHomeBar.classList.remove('d-none');
 
-                document.getElementById('specDeviceName').textContent = 'Apple iPad Pro 11"';
-                document.getElementById('specResolution').textContent = isLandscape ? '1180 × 820 px' : '820 × 1180 px';
+                document.getElementById('specDeviceName').textContent = 'Apple iPad Pro 11" (Ngang)';
+                document.getElementById('specResolution').textContent = '1180 × 820 px (Landscape)';
                 document.getElementById('specDpr').textContent = 'Ultra Retina XDR';
 
-                // Automatically adjust scale for tablet
-                if (currentScale > 0.7) {
-                    setStudioScale(0.65);
-                }
+                // iPad landscape auto scale for screen
+                setStudioScale(0.68);
             }
         }
 
@@ -823,21 +1010,22 @@ $initialPage = $targetPage ?? '/mobile';
 
         // Toggle Orientation
         function toggleOrientation() {
+            if (currentDevice === 'duo') return; // Duo is dual square
+
             isLandscape = !isLandscape;
             const btn = document.getElementById('btnOrientation');
             btn.classList.toggle('text-primary', isLandscape);
 
             if (currentDevice === 'iphone') {
-                frameEl.style.width = isLandscape ? '932px' : '430px';
-                frameEl.style.height = isLandscape ? '430px' : '932px';
+                singleFrame.style.width = isLandscape ? '932px' : '430px';
+                singleFrame.style.height = isLandscape ? '430px' : '932px';
             } else if (currentDevice === 'samsung') {
-                frameEl.style.width = isLandscape ? '915px' : '412px';
-                frameEl.style.height = isLandscape ? '412px' : '915px';
+                singleFrame.style.width = isLandscape ? '915px' : '412px';
+                singleFrame.style.height = isLandscape ? '412px' : '915px';
             } else if (currentDevice === 'ipad') {
-                frameEl.style.width = isLandscape ? '1180px' : '820px';
-                frameEl.style.height = isLandscape ? '820px' : '1180px';
+                singleFrame.style.width = isLandscape ? '1180px' : '820px';
+                singleFrame.style.height = isLandscape ? '820px' : '1180px';
             }
-            switchDevice(currentDevice);
         }
 
         // Change Iframe Page
@@ -845,12 +1033,18 @@ $initialPage = $targetPage ?? '/mobile';
             if (iframeEl && url) {
                 iframeEl.src = url;
             }
+            if (iframeLeft && url) {
+                iframeLeft.src = url;
+            }
+            if (iframeRight && url) {
+                iframeRight.src = url;
+            }
         }
 
         function reloadFrame() {
-            if (iframeEl) {
-                iframeEl.src = iframeEl.src;
-            }
+            if (iframeEl) iframeEl.src = iframeEl.src;
+            if (iframeLeft) iframeLeft.src = iframeLeft.src;
+            if (iframeRight) iframeRight.src = iframeRight.src;
         }
 
         function toggleFrameless() {
@@ -886,10 +1080,9 @@ $initialPage = $targetPage ?? '/mobile';
         }
 
         function androidRecentApps() {
-            // Pulse animation
-            frameEl.style.transform = 'scale(0.92)';
+            singleFrame.style.transform = 'scale(0.92)';
             setTimeout(() => {
-                frameEl.style.transform = '';
+                singleFrame.style.transform = '';
             }, 300);
         }
 
