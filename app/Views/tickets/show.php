@@ -2607,8 +2607,12 @@ function updateChecklistProgress() {
                         Khung điều khiển sẽ tự động mở ngay khi người dùng bấm <strong>"Chấp Nhận Cho Điều Khiển"</strong>.
                     </p>
                     <div class="mb-4">
-                        <div class="text-warning fw-bold" id="vncCountdownText">Con 30 giay cho user chap nhan</div>
-                        <div class="mt-3"><input id="vncTargetIp" class="form-control form-control-sm mx-auto" style="max-width:320px" placeholder="IP LAN may enduser, vd 192.168.1.50"></div>
+                        <div class="text-warning fw-bold mb-2" id="vncCountdownText">Còn 30 giây chờ người dùng chấp nhận...</div>
+                        <div class="mx-auto text-start" style="max-width: 500px;">
+                            <label class="form-label small text-info fw-bold mb-1"><i class="bi bi-globe me-1"></i> Địa chỉ kết nối máy khách (Khi 2 máy khác mạng Internet):</label>
+                            <input id="vncTargetIp" class="form-control form-control-sm font-monospace" placeholder="Dán link Cloudflare của khách (vd: https://xxx.trycloudflare.com)">
+                            <div class="text-white-50 mt-1" style="font-size:0.75rem;">* Để trống nếu test trên 1 máy hoặc cùng mạng LAN.</div>
+                        </div>
                     </div>
                     <div class="p-3 bg-secondary bg-opacity-25 rounded-3 d-inline-block text-start border border-secondary" style="max-width: 540px; font-size: 0.8rem;">
                         <div class="text-warning fw-bold mb-1"><i class="bi bi-info-circle me-1"></i> Yêu cầu kỹ thuật để kết nối noVNC:</div>
@@ -2657,13 +2661,24 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('vncStatusBadge').textContent = 'Đang gửi yêu cầu...';
 
             // Step 1: Send request to PHP
+            const targetVal = document.getElementById('vncTargetIp') ? document.getElementById('vncTargetIp').value.trim() : '';
+            let finalWsUrl = 'http://127.0.0.1:6080/vnc_lite.html';
+            if (targetVal) {
+                if (targetVal.startsWith('http://') || targetVal.startsWith('https://')) {
+                    finalWsUrl = targetVal.replace(/\/+$/, '') + '/vnc_lite.html';
+                } else if (targetVal.includes('.')) {
+                    finalWsUrl = 'http://' + targetVal + ':6080/vnc_lite.html';
+                }
+            }
+
             fetch('<?= $baseUrl ?>/remote-support/vnc/request', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= \App\Core\Session::csrfToken() ?>' },
                 body: JSON.stringify({
                     ticket_id: <?= (int)$ticket['id'] ?>,
-                    ws_url: 'http://127.0.0.1:6080/vnc_lite.html',
-                    session_pass: '123456', target_ip: (document.getElementById('vncTargetIp') ? document.getElementById('vncTargetIp').value.trim() : ''),
+                    ws_url: finalWsUrl,
+                    session_pass: '123456',
+                    target_ip: targetVal,
                     _csrf_token: '<?= \App\Core\Session::csrfToken() ?>'
                 })
             })
@@ -2704,9 +2719,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('vncStatusBadge').textContent = 'ĐANG ĐIỀU KHIỂN (LIVE)';
 
                     const frame = document.getElementById('itNovncFrame');
-                    if (frame.src === 'about:blank' || !frame.src.includes('6080')) {
-                        frame.src = data.iframe_url;
-                    }
+                    frame.src = data.iframe_url;
+                    const directBtn = document.getElementById('btnDirectVncTab');
+                    if (directBtn) directBtn.href = data.iframe_url;
                 } else if (data.status === 'expired') { clearInterval(vncPollTimer); document.getElementById('vncStatusBadge').className = 'badge bg-secondary'; document.getElementById('vncStatusBadge').textContent = 'Het han 30 giay - da tu huy'; alert('Yeu cau remote da het han 30 giay vi user chua chap nhan.'); bootstrap.Modal.getInstance(document.getElementById('itNovncModal')).hide(); } else if (data.status === 'rejected') {
                     clearInterval(vncPollTimer);
                     document.getElementById('vncStatusBadge').className = 'badge bg-danger';
