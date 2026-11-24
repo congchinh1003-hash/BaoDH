@@ -15,13 +15,31 @@ export function verifyTicket(token,key,now=Math.floor(Date.now()/1000)) {
         !['agent','viewer'].includes(claims.role)||!Number.isInteger(claims.exp)||claims.exp<=now||claims.exp>now+60)throw new Error('Invalid claims');
     return claims;
 }
-export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=8081}={}) {
+export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=8081,upstream}={}) {
     if(typeof key!=='string'||key.length<32)throw new Error('REMOTE_RELAY_SECRET must contain at least 32 characters');
     if(!tls&&!behindProxy)throw new Error('TLS certificate or an explicitly configured TLS reverse proxy is required');
+    if(upstream && (upstream.host!=='127.0.0.1'||!Number.isInteger(upstream.port)||upstream.port<1||upstream.port>65535))throw new Error('HTTP upstream must be a fixed loopback listener');
     const revision=/^[a-f0-9]{40}$/i.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT:'local';
-    const handler=(req,res)=>{res.writeHead(req.url==='/health'?200:404,{'Content-Type':'text/plain','X-TaskFlow-Revision':revision,'Cache-Control':'no-store'});res.end(req.url==='/health'?'ok':'Not found');};
+    const relayPaths=['/public/remote-support/relay','/remote-support/relay'];
+    const handler=(req,res)=>{
+        let pathname;
+        try {pathname=new URL(req.url,'http://localhost').pathname;}
+        catch {res.writeHead(400);res.end('Bad request');return;}
+        const health=pathname==='/health'||(upstream&&relayPaths.some(prefix=>pathname===prefix+'/health'));
+        if(health||!upstream){res.writeHead(health?200:404,{'Content-Type':'text/plain','X-TaskFlow-Revision':revision,'Cache-Control':'no-store'});res.end(health?'ok':'Not found');return;}
+        // Stream PHP/static requests to Apache; WebSocket frames stay in Node.
+        const forwarded=http.request({host:upstream.host,port:upstream.port,path:req.url,method:req.method,headers:req.headers},response=>{
+            res.writeHead(response.statusCode,response.headers);response.pipe(res);
+            response.on('error',()=>res.destroy());
+        });
+        forwarded.on('error',()=>{if(!res.headersSent){res.writeHead(502,{'Content-Type':'text/plain'});res.end('Application server unavailable');}else res.destroy();});
+        req.on('aborted',()=>forwarded.destroy());
+        res.on('close',()=>{if(!res.writableFinished)forwarded.destroy();});
+        req.pipe(forwarded);
+    };
     const server=tls?https.createServer(tls,handler):http.createServer(handler);
-    const wss=new WebSocketServer({server,maxPayload:2*1024*1024,perMessageDeflate:false});
+    const wss=new WebSocketServer({server,maxPayload:2*1024*1024,perMessageDeflate:false,
+        ...(upstream?{verifyClient:info=>{try{return relayPaths.includes(new URL(info.req.url,'http://localhost').pathname.replace(/\/+$/,''));}catch{return false;}}}:{})});
     const rooms=new Map();
     wss.on('connection',ws=>{
         ws.alive=true;ws.on('pong',()=>{ws.alive=true;});
@@ -76,8 +94,11 @@ export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=808
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
     const tls=process.env.REMOTE_TLS_CERT&&process.env.REMOTE_TLS_KEY?{cert:fs.readFileSync(process.env.REMOTE_TLS_CERT),key:fs.readFileSync(process.env.REMOTE_TLS_KEY)}:undefined;
+    const upstream=process.env.REMOTE_HTTP_UPSTREAM_PORT?{host:'127.0.0.1',port:Number(process.env.REMOTE_HTTP_UPSTREAM_PORT)}:undefined;
     const relay=createRelay({key:process.env.REMOTE_RELAY_SECRET,tls,behindProxy:process.env.REMOTE_BEHIND_TLS_PROXY==='true',
-        host:process.env.REMOTE_RELAY_HOST||'127.0.0.1',port:Number(process.env.PORT||8081)});
-    await relay.listen();console.log('TaskFlow remote relay listening');
+        host:process.env.REMOTE_RELAY_HOST||'127.0.0.1',port:Number(process.env.PORT||8081),upstream});
+    await relay.listen();
+    if(process.env.REMOTE_DROP_USER){process.setgid(process.env.REMOTE_DROP_USER);process.setuid(process.env.REMOTE_DROP_USER);}
+    console.log('TaskFlow remote relay listening');
     for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>relay.close());
 }

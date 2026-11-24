@@ -92,6 +92,9 @@ check($options['package_sha256']===hash_file('sha256',__DIR__.'/../public/agent/
 $installed=$model->enroll($options['enrollment'],'Downloaded agent');check($model->authenticate($installed['token'])['client_id']===1,'Downloaded installer belongs to the requesting enduser');
 putenv('REMOTE_RELAY_SECRET='.str_repeat('test-key-',8));
 check(RemoteSecurity::config()['relay_url']==='wss://baodh-kfy4.onrender.com/public/remote-support/relay','Bundled relay uses the same public application URL');
+unset($_SERVER['HTTP_AUTHORIZATION']);$_SERVER['REDIRECT_HTTP_AUTHORIZATION']='Bearer '.$installed['token'];
+$controller->agentPoll(new BodyRequest([]),$response);check($response->status===200,'Agent bearer survives Apache internal redirects');
+unset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
 putenv('RENDER_EXTERNAL_URL=https://another-instance.onrender.com');
 check(RemoteSecurity::installationConfig()['public_url']==='https://another-instance.onrender.com/public','Render native URL also keeps the public prefix');
 putenv('RENDER_EXTERNAL_URL');

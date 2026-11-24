@@ -9,14 +9,11 @@ FROM php:8.2-apache
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libstdc++6 \
-    util-linux \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pdo pdo_mysql
 
 # Enable Apache mod_rewrite
-RUN a2enmod rewrite proxy proxy_http proxy_wstunnel
-COPY remote/apache-relay.conf /etc/apache2/conf-available/taskflow-remote-relay.conf
-RUN a2enconf taskflow-remote-relay
+RUN a2enmod rewrite
 
 # Configure Apache AllowOverride for .htaccess routing
 RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
@@ -42,5 +39,5 @@ ENV PORT=80
 
 EXPOSE 80 10000
 
-# Bind Apache dynamically to Render's $PORT at runtime
+# Node binds Render's $PORT; PHP/Apache runs on a private loopback listener.
 CMD ["/var/www/html/remote/start-server.sh"]

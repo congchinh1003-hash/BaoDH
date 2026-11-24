@@ -10,16 +10,19 @@ if [ -z "${REMOTE_RELAY_SECRET:-}" ]; then
 fi
 export REMOTE_RELAY_SECRET
 export REMOTE_BEHIND_TLS_PROXY=true
-export REMOTE_RELAY_HOST=127.0.0.1
+export REMOTE_RELAY_HOST=0.0.0.0
+export REMOTE_HTTP_UPSTREAM_PORT=8081
+export REMOTE_DROP_USER=www-data
 
-sed -i "s/Listen [0-9]*/Listen ${PORT:-80}/g" /etc/apache2/ports.conf
-sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${PORT:-80}>/g" /etc/apache2/sites-available/000-default.conf
+sed -i 's/Listen [0-9]*/Listen 127.0.0.1:8081/g' /etc/apache2/ports.conf
+sed -i 's/<VirtualHost \*:[0-9]*>/<VirtualHost *:8081>/g' /etc/apache2/sites-available/000-default.conf
 
-# Node has its own internal port; Render's public PORT belongs to Apache.
-PORT=8081 su -s /bin/sh -c 'exec node remote/relay/server.mjs' www-data &
-relay_pid=$!
+# Apache serves PHP internally. Node receives public WebSocket frames directly,
+# avoiding Apache's stalled WebSocket tunnels behind Render's HTTPS ingress.
 apache2-foreground &
 apache_pid=$!
+node remote/relay/server.mjs &
+relay_pid=$!
 
 stop() {
     kill "$apache_pid" "$relay_pid" 2>/dev/null || true

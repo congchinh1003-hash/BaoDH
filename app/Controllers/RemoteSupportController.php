@@ -20,7 +20,12 @@ class RemoteSupportController extends Controller
     }
     private function agent(): array
     {
-        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if ($header === '' && function_exists('getallheaders')) {
+            foreach (getallheaders() ?: [] as $name => $value) {
+                if (strcasecmp($name,'Authorization')===0) { $header=$value; break; }
+            }
+        }
         if (!str_starts_with($header,'Bearer ')) throw new DomainException('Agent authentication required.');
         return $this->model->authenticate(substr($header,7));
     }
