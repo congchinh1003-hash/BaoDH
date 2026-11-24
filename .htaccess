@@ -4,6 +4,9 @@
     # Prevent directory browsing
     Options -Indexes
 
+    # Preserve Apache's WebSocket proxy handler before public/index.php rewrites.
+    RewriteRule ^(?:public/)?remote-support/relay(?:/|$) - [L]
+
     # Allow direct access to public/ if prefixed
     RewriteRule ^public/(.*)$ public/$1 [L]
 

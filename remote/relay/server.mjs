@@ -18,7 +18,8 @@ export function verifyTicket(token,key,now=Math.floor(Date.now()/1000)) {
 export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=8081}={}) {
     if(typeof key!=='string'||key.length<32)throw new Error('REMOTE_RELAY_SECRET must contain at least 32 characters');
     if(!tls&&!behindProxy)throw new Error('TLS certificate or an explicitly configured TLS reverse proxy is required');
-    const handler=(req,res)=>{res.writeHead(req.url==='/health'?200:404,{'Content-Type':'text/plain'});res.end(req.url==='/health'?'ok':'Not found');};
+    const revision=/^[a-f0-9]{40}$/i.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT:'local';
+    const handler=(req,res)=>{res.writeHead(req.url==='/health'?200:404,{'Content-Type':'text/plain','X-TaskFlow-Revision':revision,'Cache-Control':'no-store'});res.end(req.url==='/health'?'ok':'Not found');};
     const server=tls?https.createServer(tls,handler):http.createServer(handler);
     const wss=new WebSocketServer({server,maxPayload:2*1024*1024,perMessageDeflate:false});
     const rooms=new Map();

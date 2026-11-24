@@ -15,6 +15,10 @@ import {fileURLToPath} from 'node:url';
 if(process.platform!=='win32')throw new Error('This optional proxy test uses installed XAMPP on Windows.');
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../..');
 const directory=path.join(root,'remote/test-artifacts',Date.now().toString());fs.mkdirSync(directory,{recursive:true});
+fs.copyFileSync(path.join(root,'.htaccess'),path.join(directory,'.htaccess'));
+fs.mkdirSync(path.join(directory,'public'));
+fs.copyFileSync(path.join(root,'public/.htaccess'),path.join(directory,'public/.htaccess'));
+fs.writeFileSync(path.join(directory,'public/index.php'),'Application routing fixture');
 const apacheRoot=process.env.APACHE_ROOT||'C:/xampp/apache';
 const key='apache-relay-test-'.repeat(4);
 let relay,apache;
@@ -37,6 +41,8 @@ try {
     let health;for(let attempt=0;attempt<30;attempt++){try{health=await get('/public/remote-support/relay/health');break;}catch{await new Promise(resolve=>setTimeout(resolve,100));}}
     assert.deepEqual(health,{status:200,body:'ok'});assert.deepEqual(await get('/remote-support/relay/health'),{status:200,body:'ok'});
     const url=`wss://127.0.0.1:${port}/public/remote-support/relay`;
+    const anonymous=new WebSocket(url,{rejectUnauthorized:false});await once(anonymous,'open');const rejected=once(anonymous,'close');
+    anonymous.send(JSON.stringify({kind:'auth',token:'invalid-test-ticket'}));assert.equal((await rejected)[0],4003);
     const agent=await connect(url,'agent'),viewer=await connect(url,'viewer');
     try {
         await new Promise(resolve=>setTimeout(resolve,30));
