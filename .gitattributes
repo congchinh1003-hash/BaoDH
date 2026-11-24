@@ -1,0 +1,2 @@
+# Linux startup scripts must retain LF when checked out on Windows and sent to Docker.
+remote/*.sh text eol=lf

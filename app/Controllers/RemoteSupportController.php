@@ -51,13 +51,14 @@ class RemoteSupportController extends Controller
     }
     public function index(Request $request, Response $response): string
     {
-        $staff=Auth::isStaff(); $configurationError=null;
+        $staff=Auth::isStaff(); $configurationError=null; $installationError=null;
         try { RemoteSecurity::config(); } catch (\RuntimeException $e) { $configurationError=$e->getMessage(); }
+        try { RemoteSecurity::installationConfig(); } catch (\RuntimeException $e) { $installationError=$e->getMessage(); }
         $users=$staff ? (new User())->getAllUsers() : [];
         foreach ($users as &$user) $user['remote_devices']=$this->model->devices((int)$user['id']);
         return $this->render('remote/index',['pageTitle'=>'Hỗ trợ từ xa','isStaff'=>$staff,
             'devices'=>$this->model->devices(Auth::id()),'allUsers'=>$users,
-            'sessions'=>$this->model->recent(Auth::id(),$staff),'configurationError'=>$configurationError]);
+            'sessions'=>$this->model->recent(Auth::id(),$staff),'configurationError'=>$configurationError,'installationError'=>$installationError]);
     }
     public function createQuick(Request $request, Response $response): void
     {
@@ -95,7 +96,7 @@ class RemoteSupportController extends Controller
     public function downloadAgent(Request $request, Response $response): void
     {
         try {
-            $config=RemoteSecurity::config();
+            $config=RemoteSecurity::installationConfig();
             $zip=dirname(__DIR__,2).'/public/agent/TaskFlow-Agent.zip';
             if (!is_file($zip)) throw new \RuntimeException('Build the Windows agent package before installing. See docs/REMOTE_SUPPORT.md.');
             $enrollment=$this->model->issueEnrollment(Auth::id());
@@ -111,7 +112,7 @@ class RemoteSupportController extends Controller
     public function enroll(Request $request, Response $response): void
     {
         $this->api($response,function() use($request) {
-            $config=RemoteSecurity::config();
+            $config=RemoteSecurity::installationConfig();
             return $this->model->enroll((string)$request->input('enrollment'),(string)$request->input('name','Windows PC')) +
                 ['url'=>$config['public_url']];
         });

@@ -1,13 +1,22 @@
+FROM node:22-bookworm-slim AS remote-relay-deps
+WORKDIR /build
+COPY remote/relay/package.json remote/relay/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
+
 FROM php:8.2-apache
 
 # Install PDO MySQL and SSL certificates for cloud database connections (TiDB Cloud)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    libstdc++6 \
+    util-linux \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pdo pdo_mysql
 
 # Enable Apache mod_rewrite
-RUN a2enmod rewrite
+RUN a2enmod rewrite proxy proxy_http proxy_wstunnel
+COPY remote/apache-relay.conf /etc/apache2/conf-available/taskflow-remote-relay.conf
+RUN a2enconf taskflow-remote-relay
 
 # Configure Apache AllowOverride for .htaccess routing
 RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
@@ -17,6 +26,9 @@ WORKDIR /var/www/html
 
 # Copy project files
 COPY . /var/www/html/
+COPY --from=remote-relay-deps /usr/local/bin/node /usr/local/bin/node
+COPY --from=remote-relay-deps /build/node_modules /var/www/html/remote/relay/node_modules
+RUN chmod +x /var/www/html/remote/start-server.sh
 
 # Ensure all runtime writable directories exist and set correct permissions
 RUN mkdir -p /var/www/html/uploads /var/www/html/storage /var/www/html/public/uploads \
@@ -31,4 +43,4 @@ ENV PORT=80
 EXPOSE 80 10000
 
 # Bind Apache dynamically to Render's $PORT at runtime
-CMD ["sh", "-c", "sed -i \"s/Listen [0-9]*/Listen ${PORT:-80}/g\" /etc/apache2/ports.conf && sed -i \"s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${PORT:-80}>/g\" /etc/apache2/sites-available/000-default.conf && apache2-foreground"]
+CMD ["/var/www/html/remote/start-server.sh"]

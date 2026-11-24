@@ -5,12 +5,17 @@ $baseUrl=Response::baseUrl();
 <div class="container py-4">
     <h2>Hỗ trợ từ xa</h2>
     <?php if ($configurationError): ?><div class="alert alert-warning"><?= htmlspecialchars($configurationError) ?></div><?php endif; ?>
-    <p>Cài agent Windows một lần. Lần đầu kết nối, chọn Accept hoặc Deny trên máy được hỗ trợ. Quyền được ghi nhớ cho tài khoản IT và thiết bị đã yêu cầu.</p>
+    <p><strong>Chỉ máy người dùng được hỗ trợ cần cài agent một lần.</strong> Máy IT/admin dùng trình duyệt, không cần cài agent. Lần đầu kết nối, chọn Accept hoặc Deny trên máy người dùng.</p>
+    <?php if (!$isStaff): ?>
+    <?php if ($installationError): ?><div class="alert alert-danger"><?= htmlspecialchars($installationError) ?></div><?php endif; ?>
     <form method="post" action="<?= $baseUrl ?>/remote-support/install" class="mb-4">
         <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(Session::csrfToken()) ?>">
-        <button class="btn btn-outline-primary" <?= $configurationError ? 'disabled' : '' ?>>Tải bộ cài cho máy của tôi</button>
-        <span class="text-muted small">Chạy PowerShell với quyền Administrator. Bộ cài có hiệu lực 15 phút, dùng một lần.</span>
+        <button type="submit" class="btn btn-outline-primary" <?= $installationError ? 'disabled' : '' ?>>Tải bộ cài agent cho máy của tôi</button>
+        <span class="text-muted small">Cài trên máy cần được IT hỗ trợ. Chạy PowerShell với quyền Administrator; IT có thể nhập mật khẩu quản trị. Bộ cài có hiệu lực 15 phút.</span>
     </form>
+    <?php else: ?>
+    <div class="alert alert-info">Máy IT/admin không cần cài agent. Người dùng đăng nhập tài khoản của mình tại <strong>Hỗ trợ từ xa</strong>, tải và cài agent trên máy cần hỗ trợ; sau đó IT chọn máy ở danh sách bên dưới.</div>
+    <?php endif; ?>
     <?php if ($devices): ?>
     <h5>Máy của tôi</h5>
     <?php foreach ($devices as $device): ?>
@@ -37,8 +42,8 @@ $baseUrl=Response::baseUrl();
     <?php foreach ($sessions as $s): ?>
     <tr><td><?= htmlspecialchars(($s['staff_name']??'').' / '.$s['client_name'].' / '.($s['device_name']??'')) ?></td>
     <td><?= htmlspecialchars($s['started_at'] ?? $s['created_at']) ?></td>
-    <td><?= $s['started_at'] ? max(0,($s['ended_at'] ? strtotime($s['ended_at'].' UTC') : time())-strtotime($s['started_at'].' UTC')).'s' : '—' ?></td>
-    <td><?= htmlspecialchars($s['status']) ?></td><td><?php if ($s['device_id']): ?><a href="<?= $baseUrl ?>/remote-support/session/<?= htmlspecialchars($s['session_code']) ?>">Mở phiên</a><?php endif; ?></td></tr>
+    <td><?= $s['started_at'] && ($s['device_id'] || $s['ended_at']) ? max(0,($s['ended_at'] ? strtotime($s['ended_at'].' UTC') : time())-strtotime($s['started_at'].' UTC')).'s' : '—' ?></td>
+    <td><?= $s['device_id'] ? htmlspecialchars($s['status']) : 'Phiên cũ (đã ngừng)' ?></td><td><?php if ($s['device_id']): ?><a href="<?= $baseUrl ?>/remote-support/session/<?= htmlspecialchars($s['session_code']) ?>">Mở phiên</a><?php endif; ?></td></tr>
     <?php endforeach; ?></tbody></table></div>
 </div>
 <script>

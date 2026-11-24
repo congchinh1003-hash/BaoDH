@@ -11,7 +11,19 @@ The old ticket flow opened the IT browser's `127.0.0.1:6080`, required a separat
 
 ## Server deployment
 
-Set these on the PHP application:
+### Current Render public deployment
+
+Use `https://baodh-kfy4.onrender.com/public/remote-support`. Only the end-user PC installs an agent; IT/admin uses a browser. The end user downloads the personalized installer while signed into their own TaskFlow account. The IT hub does not ask IT to install an agent.
+
+The root Docker image now includes the Node relay and starts it alongside Apache. Apache forwards `wss://baodh-kfy4.onrender.com/public/remote-support/relay` to a private loopback listener. A strong signing secret is generated at server startup when one is not configured and shared by PHP/Node through the process environment. Server restarts rotate short-lived relay tickets while retaining agent credentials and remembered consent in the database, so PCs do not need reinstallation. Existing Render database variables are still required; no separate relay service or manually entered remote variables are required for this deployment.
+
+After Render redeploys the current branch, verify `https://baodh-kfy4.onrender.com/public/remote-support/relay/health` returns `ok`. Then sign in as an end user and download the installer. Download/enrollment remain available during relay setup; creating an IT session requires the authenticated relay configuration to be ready. `REMOTE_PUBLIC_URL` can override the canonical public URL. Otherwise `RENDER_EXTERNAL_URL` plus `/public` is used, falling back to the owner-supplied deployment above. Installer URLs never come from request Host headers.
+
+The Linux startup script supervises both services and terminates the container if either fails so Render can restart them together. Only Apache binds Render's public `PORT`; Node runs as `www-data` on `127.0.0.1:8081`.
+
+### Optional separate relay or custom hosting
+
+For custom hosting or an independently deployed relay, set these on the PHP application:
 
 ```dotenv
 REMOTE_PUBLIC_URL=https://support.example.com
@@ -20,7 +32,7 @@ REMOTE_RELAY_SECRET=<random secret of at least 32 characters>
 REMOTE_ICE_SERVERS=[{"urls":"stun:stun.l.google.com:19302"}]
 ```
 
-Generate a secret with `python -c "import secrets; print(secrets.token_hex(32))"`. Set the **same** secret on the relay. Keep it out of Git. The application fails closed when HTTPS/WSS configuration or a sufficiently long shared secret is missing. `REMOTE_PUBLIC_URL` is the canonical application URL, including any installation subdirectory; it is used instead of request Host headers in personalized installers.
+Generate a secret with `python -c "import secrets; print(secrets.token_hex(32))"`. Set the **same** secret on the separate relay. Keep it out of Git. Remote connections fail closed when HTTPS/WSS configuration or a sufficiently long shared secret is missing. Installer download and enrollment require only a valid canonical HTTPS application URL, including its installation subdirectory.
 
 Build the Windows package on Windows after changing agent or transport code:
 
@@ -91,6 +103,8 @@ cd remote\relay
 npm.cmd ci
 npm.cmd test
 npm.cmd run test:browser
+# Optional Windows/XAMPP check of the same Apache /public proxy configuration:
+npm.cmd run test:proxy
 cd ..\..
 powershell -NoProfile -ExecutionPolicy Bypass -File remote\agent\build.ps1
 ```

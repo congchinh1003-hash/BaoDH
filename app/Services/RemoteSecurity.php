@@ -5,14 +5,25 @@ use RuntimeException;
 
 final class RemoteSecurity
 {
+    public static function installationConfig(): array
+    {
+        // This trusted default is the public deployment supplied by the owner.
+        // Never construct installer URLs from an untrusted HTTP Host header.
+        $renderUrl = rtrim(getenv('RENDER_EXTERNAL_URL') ?: '', '/');
+        $url = rtrim(getenv('REMOTE_PUBLIC_URL') ?: ($renderUrl ? $renderUrl . '/public' : 'https://baodh-kfy4.onrender.com/public'), '/');
+        if (!filter_var($url, FILTER_VALIDATE_URL) || parse_url($url, PHP_URL_SCHEME) !== 'https') {
+            throw new RuntimeException('Địa chỉ máy chủ tải agent phải sử dụng HTTPS.');
+        }
+        return ['public_url' => $url];
+    }
+
     public static function config(): array
     {
-        $url = rtrim(getenv('REMOTE_PUBLIC_URL') ?: '', '/');
-        $relay = getenv('REMOTE_RELAY_URL') ?: '';
+        $url = self::installationConfig()['public_url'];
+        $relay = getenv('REMOTE_RELAY_URL') ?: preg_replace('/^https:/', 'wss:', $url) . '/remote-support/relay';
         $key = getenv('REMOTE_RELAY_SECRET') ?: '';
-        if (!filter_var($url, FILTER_VALIDATE_URL) || parse_url($url, PHP_URL_SCHEME) !== 'https' ||
-            !filter_var($relay, FILTER_VALIDATE_URL) || parse_url($relay, PHP_URL_SCHEME) !== 'wss' || strlen($key) < 32) {
-            throw new RuntimeException('Configure REMOTE_PUBLIC_URL (HTTPS), REMOTE_RELAY_URL (WSS), and REMOTE_RELAY_SECRET (at least 32 characters).');
+        if (!filter_var($relay, FILTER_VALIDATE_URL) || parse_url($relay, PHP_URL_SCHEME) !== 'wss' || strlen($key) < 32) {
+            throw new RuntimeException('Máy chủ hỗ trợ từ xa chưa sẵn sàng. Bạn vẫn có thể tải và cài agent; vui lòng thử kết nối lại sau khi máy chủ cập nhật.');
         }
         $ice = json_decode(getenv('REMOTE_ICE_SERVERS') ?: '[{"urls":"stun:stun.l.google.com:19302"}]', true);
         if (!is_array($ice)) throw new RuntimeException('REMOTE_ICE_SERVERS must be a JSON array.');

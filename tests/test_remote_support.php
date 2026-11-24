@@ -78,4 +78,31 @@ $secondEnrollment=$model->issueEnrollment(3);$second=$model->enroll($secondEnrol
 $controller->agentAction(new BodyRequest(['action'=>'end','session_code'=>$s['session_code']]),$response);check($response->status===403,'Authenticated wrong PC cannot end a session');
 Session::set('user_id',1);Session::set('user_roles',['USER']);$controller->viewerPoll(new BodyRequest([]),$response,$s['session_code']);check($response->status===403,'Enduser cannot obtain viewer control ticket');
 putenv('REMOTE_RELAY_SECRET=short');try{RemoteSecurity::config();throw new LogicException('Weak secret was accepted');}catch(RuntimeException $e){check(true,'Fail closed for missing TLS configuration');}
+
+// The public install route must work before a relay is configured or deployed.
+putenv('REMOTE_PUBLIC_URL');putenv('REMOTE_RELAY_URL');putenv('REMOTE_RELAY_SECRET');putenv('RENDER_EXTERNAL_URL');
+check(RemoteSecurity::installationConfig()['public_url']==='https://baodh-kfy4.onrender.com/public','Installer defaults to the owner supplied public URL');
+$_SERVER['SCRIPT_NAME']='/public/index.php';
+ob_start();$controller->downloadAgent(new BodyRequest([]),$response);$installer=ob_get_clean();
+check(str_starts_with($installer,'$TaskFlowInstallOptions = '),'Authenticated enduser can download without relay settings');
+preg_match("/TaskFlowInstallOptions = '([^']+)'/",$installer,$match);
+$options=json_decode(base64_decode($match[1]),true);
+check($options['url']==='https://baodh-kfy4.onrender.com/public','Personalized installer preserves /public in all API addresses');
+check($options['package_sha256']===hash_file('sha256',__DIR__.'/../public/agent/TaskFlow-Agent.zip'),'Download pins the distributed Windows package');
+$installed=$model->enroll($options['enrollment'],'Downloaded agent');check($model->authenticate($installed['token'])['client_id']===1,'Downloaded installer belongs to the requesting enduser');
+putenv('REMOTE_RELAY_SECRET='.str_repeat('test-key-',8));
+check(RemoteSecurity::config()['relay_url']==='wss://baodh-kfy4.onrender.com/public/remote-support/relay','Bundled relay uses the same public application URL');
+putenv('RENDER_EXTERNAL_URL=https://another-instance.onrender.com');
+check(RemoteSecurity::installationConfig()['public_url']==='https://another-instance.onrender.com/public','Render native URL also keeps the public prefix');
+putenv('RENDER_EXTERNAL_URL');
+
+// Render the actual hub: connection readiness must never disable installation.
+require_once __DIR__.'/../app/Helpers.php';
+$isStaff=false;$configurationError='Relay unavailable';$installationError=null;$devices=[];$sessions=[];$allUsers=[];
+ob_start();require __DIR__.'/../app/Views/remote/index.php';$hub=ob_get_clean();
+preg_match('/<form[^>]+remote-support\/install.*?<\/form>/s',$hub,$downloadForm);
+check(isset($downloadForm[0])&&!str_contains($downloadForm[0],'disabled'),'Enduser download button stays enabled without a relay');
+check(str_contains($downloadForm[0],'/public/remote-support/install'),'Download form posts to the correct public route');
+$isStaff=true;ob_start();require __DIR__.'/../app/Views/remote/index.php';$staffHub=ob_get_clean();
+check(!str_contains($staffHub,'/remote-support/install'),'IT hub does not suggest installing an agent on the IT machine');
 echo "PASS: $count remote support assertions\n";
