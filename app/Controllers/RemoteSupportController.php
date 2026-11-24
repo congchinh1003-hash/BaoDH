@@ -1,749 +1,171 @@
 <?php
-
 namespace App\Controllers;
 
-use App\Core\Auth;
-use App\Core\Controller;
-use App\Core\Request;
-use App\Core\Response;
-use App\Core\Session;
-use App\Models\Notification;
-use App\Models\RemoteSession;
-use App\Models\Ticket;
-use App\Models\User;
+use App\Core\{Auth,Controller,Request,Response};
+use App\Models\{RemoteSession,Ticket,User};
+use App\Services\RemoteSecurity;
+use DomainException;
 
 class RemoteSupportController extends Controller
 {
-    private RemoteSession $remoteModel;
+    private RemoteSession $model;
+    public function __construct(?RemoteSession $model = null) { $this->model = $model ?? new RemoteSession(); }
 
-    public function __construct()
+    private function api(Response $response, callable $action): void
     {
-        $this->remoteModel = new RemoteSession();
+        header('Cache-Control: no-store');
+        try { $response->json(['success'=>true] + $action()); }
+        catch (DomainException $e) { $response->json(['success'=>false,'message'=>$e->getMessage()],403); }
+        catch (\RuntimeException $e) { $response->json(['success'=>false,'message'=>$e->getMessage()],503); }
     }
-
-    /**
-     * Remote Support Hub (/remote-support)
-     */
+    private function agent(): array
+    {
+        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (!str_starts_with($header,'Bearer ')) throw new DomainException('Agent authentication required.');
+        return $this->model->authenticate(substr($header,7));
+    }
+    private function authorized(string $code, bool $agent = false): array
+    {
+        $this->model->expireStale();
+        $s = $this->model->findByCode($code);
+        if (!$s || !$s['device_id']) throw new DomainException('Session not found.');
+        if ($agent) {
+            if ((int)$this->agent()['id'] !== (int)$s['device_id']) throw new DomainException('This session belongs to another PC.');
+        } elseif (Auth::id() !== (int)$s['client_id'] &&
+            !(Auth::isStaff() && Auth::id()===(int)$s['staff_id'] && hash_equals($s['operator_device'],RemoteSecurity::operatorDevice(Auth::id())))) {
+            throw new DomainException('Only this user and the requesting IT device can access the session.');
+        }
+        return $s;
+    }
+    private function viewer(string $code): array
+    {
+        $s=$this->authorized($code);
+        if (!Auth::isStaff() || Auth::id()!==(int)$s['staff_id'] || !hash_equals($s['operator_device'],RemoteSecurity::operatorDevice(Auth::id()))) throw new DomainException('Requesting IT device required.');
+        return $s;
+    }
+    private function sessionData(array $s, string $role, int $after): array
+    {
+        $active = in_array($s['status'],['ACCEPTED','CONNECTED'],true) && $this->model->hasGrant($s);
+        return ['session'=>$s,'signals'=>$this->model->signals($s,$role==='agent'?'CLIENT':'STAFF',$after),
+            'relay_ticket'=>$active ? RemoteSecurity::relayTicket($s,$role) : null];
+    }
     public function index(Request $request, Response $response): string
     {
-        $user = Auth::user();
-        $isStaff = Auth::isStaff() || Auth::isManager() || Auth::isAdmin();
-
-        $activeSessions = $isStaff ? $this->remoteModel->getAllRecent(15) : [];
-        $pendingForMe = $this->remoteModel->findActiveForClient((int)$user['id']);
-
-        $userModel = new User();
-        $allUsers = $isStaff ? $userModel->getAllUsers() : [];
-
-        $mySupportSession = null;
-        if (!$isStaff && $user) {
-            $mySupportSession = $this->remoteModel->findOrCreateActiveForClient((int)$user['id']);
-        }
-
-        return $this->render('remote/index', [
-            'pageTitle'        => 'Hỗ Trợ Từ Xa (Remote Desktop Assistance)',
-            'isStaff'          => $isStaff,
-            'activeSessions'   => $activeSessions,
-            'pendingForMe'     => $pendingForMe,
-            'mySupportSession' => $mySupportSession,
-            'allUsers'         => $allUsers
-        ]);
+        $staff=Auth::isStaff(); $configurationError=null;
+        try { RemoteSecurity::config(); } catch (\RuntimeException $e) { $configurationError=$e->getMessage(); }
+        $users=$staff ? (new User())->getAllUsers() : [];
+        foreach ($users as &$user) $user['remote_devices']=$this->model->devices((int)$user['id']);
+        return $this->render('remote/index',['pageTitle'=>'Hỗ trợ từ xa','isStaff'=>$staff,
+            'devices'=>$this->model->devices(Auth::id()),'allUsers'=>$users,
+            'sessions'=>$this->model->recent(Auth::id(),$staff),'configurationError'=>$configurationError]);
     }
-
-    /**
-     * Join session by PIN code
-     */
-    public function joinByPin(Request $request, Response $response): void
-    {
-        $pin = trim($request->input('pin') ?? '');
-        if (empty($pin)) {
-            $this->setFlash('danger', 'Vui lòng nhập mã PIN kết nối.');
-            $response->redirect('/remote-support');
-            return;
-        }
-
-        $session = $this->remoteModel->findByCode($pin);
-        if (!$session) {
-            $this->setFlash('danger', "Không tìm thấy phiên hỗ trợ có mã: {$pin}");
-            $response->redirect('/remote-support');
-            return;
-        }
-
-        $response->redirect("/remote-support/session/{$session['session_code']}");
-    }
-
-    /**
-     * IT creates remote assistance request directly from a Ticket
-     */
-    public function requestFromTicket(Request $request, Response $response, string $ticketId): void
-    {
-        if (!Auth::isStaff() && !Auth::isManager() && !Auth::isAdmin()) {
-            $this->setFlash('danger', 'Chỉ kỹ thuật viên IT mới có quyền tạo yêu cầu Remote hỗ trợ.');
-            $response->redirect("/tickets/{$ticketId}");
-            return;
-        }
-
-        $ticketModel = new Ticket();
-        $ticket = $ticketModel->findById((int)$ticketId);
-        if (!$ticket) {
-            $this->setFlash('danger', 'Không tìm thấy ticket.');
-            $response->redirect('/tickets');
-            return;
-        }
-
-        $staff = Auth::user();
-        $clientId = (int)$ticket['requester_id'];
-
-        // Check if an active session already exists for this ticket
-        $existing = $this->remoteModel->findActiveForTicket((int)$ticketId);
-        if ($existing) {
-            $response->redirect("/remote-support/session/{$existing['session_code']}");
-            return;
-        }
-
-        // Create new session
-        $note = "Remote hỗ trợ cho sự cố: " . $ticket['title'];
-        $session = $this->remoteModel->createSession((int)$staff['id'], $clientId, (int)$ticketId, $note);
-
-        // Notify client in real-time
-        $notifModel = new Notification();
-        $notifModel->create([
-            'user_id'   => $clientId,
-            'ticket_id' => (int)$ticketId,
-            'title'     => "🔔 Yêu cầu kết nối Remote máy tính từ IT {$staff['full_name']}",
-            'message'   => "Kỹ thuật viên đang yêu cầu kết nối remote để kiểm tra máy tính cho sự cố [{$ticket['ticket_code']}]. Bấm vào để cấp quyền chia sẻ màn hình.",
-            'type'      => 'remote',
-            'link'      => "/remote-support/session/{$session['session_code']}"
-        ]);
-
-        // Add internal comment into ticket history
-        $ticketModel->addComment(
-            (int)$ticketId, 
-            (int)$staff['id'], 
-            "🖥️ **[HỆ THỐNG REMOTE DESKTOP]** Kỹ thuật viên **{$staff['full_name']}** đã khởi tạo phiên hỗ trợ trực tuyến từ xa mã `{$session['session_code']}`. [Bấm vào đây để tham gia phiên kết nối](/remote-support/session/{$session['session_code']})", 
-            true
-        );
-
-        $this->setFlash('success', "Đã tạo phiên Remote {$session['session_code']}. Vui lòng chờ người dùng chấp nhận chia sẻ.");
-        $response->redirect("/remote-support/session/{$session['session_code']}");
-    }
-
-    /**
-     * Create quick manual session between staff and user
-     */
     public function createQuick(Request $request, Response $response): void
     {
-        if (!Auth::isStaff() && !Auth::isManager() && !Auth::isAdmin()) {
-            $this->setFlash('danger', 'Chỉ kỹ thuật viên IT mới có quyền tạo phiên hỗ trợ.');
-            $response->redirect('/remote-support');
-            return;
-        }
-
-        $clientId = (int)$request->input('client_id');
-        $notes = trim($request->input('notes') ?? 'Hỗ trợ kỹ thuật nhanh');
-
-        if (!$clientId) {
-            $this->setFlash('danger', 'Vui lòng chọn nhân viên cần hỗ trợ.');
-            $response->redirect('/remote-support');
-            return;
-        }
-
-        $staff = Auth::user();
-        $session = $this->remoteModel->createSession((int)$staff['id'], $clientId, null, $notes);
-
-        $notifModel = new Notification();
-        $notifModel->create([
-            'user_id'   => $clientId,
-            'ticket_id' => null,
-            'title'     => "🔔 Yêu cầu kết nối Remote máy tính từ IT {$staff['full_name']}",
-            'message'   => "Kỹ thuật viên đang yêu cầu kết nối remote để hỗ trợ máy tính cho bạn. Bấm vào để cấp quyền chia sẻ màn hình.",
-            'type'      => 'remote',
-            'link'      => "/remote-support/session/{$session['session_code']}"
-        ]);
-
-        $response->redirect("/remote-support/session/{$session['session_code']}");
+        try {
+            if (!Auth::isStaff()) throw new DomainException('IT operator required.');
+            RemoteSecurity::config();
+            $s=$this->model->createSession(Auth::id(),(int)$request->input('client_id'),null,
+                mb_substr((string)$request->input('notes','Hỗ trợ kỹ thuật'),0,2000),RemoteSecurity::operatorDevice(Auth::id()),(int)$request->input('device_id'));
+            $response->redirect('/remote-support/session/'.$s['session_code']);
+        } catch (\RuntimeException $e) { $this->setFlash('danger',$e->getMessage()); $response->redirect('/remote-support'); }
     }
-
-    /**
-     * Interactive Remote Screen Room (/remote-support/session/{code})
-     */
+    public function requestFromTicket(Request $request, Response $response, string $ticketId): void
+    {
+        try {
+            if (!Auth::isStaff()) throw new DomainException('IT operator required.');
+            RemoteSecurity::config();
+            $ticket=(new Ticket())->findById((int)$ticketId);
+            if (!$ticket) throw new DomainException('Ticket not found.');
+            $existing=$this->model->findActiveForTicket((int)$ticketId);
+            $s=$existing ?: $this->model->createSession(Auth::id(),(int)$ticket['requester_id'],(int)$ticketId,
+                $ticket['title'],RemoteSecurity::operatorDevice(Auth::id()));
+            $this->viewer($s['session_code']);
+            $response->redirect('/remote-support/session/'.$s['session_code']);
+        } catch (\RuntimeException $e) { $this->setFlash('danger',$e->getMessage()); $response->redirect('/remote-support'); }
+    }
     public function session(Request $request, Response $response, string $code): string
     {
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $this->setFlash('danger', "Phiên hỗ trợ {$code} không tồn tại hoặc đã kết thúc.");
-            $response->redirect('/remote-support');
-            return '';
-        }
-
-        $userId = Auth::id();
-        $isStaffUser = Auth::isStaff() || Auth::isAdmin() || Auth::isManager();
-
-        // If session was created by client and IT staff joins with PIN, assign staff
-        if (empty($session['staff_id']) || (int)$session['staff_id'] === 0) {
-            if ($isStaffUser) {
-                $this->remoteModel->assignStaff((int)$session['id'], $userId);
-                $session['staff_id'] = $userId;
-                $session['staff_name'] = Auth::user()['full_name'];
-            }
-        }
-
-        $isStaff = ($userId === (int)$session['staff_id']) || $isStaffUser;
-        $isClient = ($userId === (int)$session['client_id']);
-
-        if (!$isStaff && !$isClient) {
-            $this->setFlash('danger', 'Bạn không có quyền tham gia vào phiên hỗ trợ kỹ thuật này.');
-            $response->redirect('/dashboard');
-            return '';
-        }
-
-        $roleInSession = $isStaff ? 'STAFF' : 'CLIENT';
-
-        return $this->render('remote/session', [
-            'pageTitle'     => "Phiên Remote #{$session['session_code']} - TaskFlow Live Assistance",
-            'session'       => $session,
-            'roleInSession' => $roleInSession,
-            'isStaff'       => $isStaff,
-            'isClient'      => $isClient
-        ]);
+        try {
+            $s=$this->authorized($code); $config=RemoteSecurity::config();
+            return $this->render('remote/session',['pageTitle'=>'Remote '.$code,'session'=>$s,
+                'isViewer'=>Auth::isStaff() && Auth::id()===(int)$s['staff_id'],
+                'remoteConfig'=>['relayUrl'=>$config['relay_url'],'iceServers'=>$config['ice_servers']]]);
+        } catch (\RuntimeException $e) { $this->setFlash('danger',$e->getMessage()); $response->redirect('/remote-support'); return ''; }
     }
-
-    /**
-     * AJAX API: Send WebRTC Signal or Action (OFFER, ANSWER, CANDIDATE, POINTER, CHAT, COMMAND)
-     */
-    public function apiSignalPost(Request $request, Response $response): void
+    public function downloadAgent(Request $request, Response $response): void
     {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) {
-                    $body = $decoded;
-                }
-            }
-        }
-
-        $code = trim($body['session_code'] ?? '');
-        $signalType = trim($body['signal_type'] ?? '');
-        $payload = is_string($body['payload'] ?? null) ? $body['payload'] : json_encode($body['payload'] ?? []);
-        $senderType = trim($body['sender_type'] ?? '');
-
-        if (!$code || !$signalType || !$senderType) {
-            $response->json(['success' => false, 'message' => 'Missing parameters'], 400);
-            return;
-        }
-
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Session not found'], 404);
-            return;
-        }
-
-        $insertId = $this->remoteModel->addSignal((int)$session['id'], $senderType, $signalType, $payload);
-
-        // Auto update session status if needed
-        if ($signalType === 'OFFER' || $signalType === 'ANSWER') {
-            $this->remoteModel->updateStatus((int)$session['id'], 'CONNECTED');
-        }
-
-        $response->json(['success' => true, 'signal_id' => $insertId]);
+        try {
+            $config=RemoteSecurity::config();
+            $zip=dirname(__DIR__,2).'/public/agent/TaskFlow-Agent.zip';
+            if (!is_file($zip)) throw new \RuntimeException('Build the Windows agent package before installing. See docs/REMOTE_SUPPORT.md.');
+            $enrollment=$this->model->issueEnrollment(Auth::id());
+            $options=base64_encode(json_encode(['url'=>$config['public_url'],'enrollment'=>$enrollment['token'],
+                'package_sha256'=>hash_file('sha256',$zip)],JSON_THROW_ON_ERROR));
+            $installer=file_get_contents(dirname(__DIR__,2).'/public/agent/Install-TaskFlowAgent.ps1');
+            $script="$" . "TaskFlowInstallOptions = '$options'\r\n" . $installer;
+            header('Cache-Control: no-store'); header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="Install-TaskFlowAgent.ps1"');
+            echo $script;
+        } catch (\RuntimeException $e) { $this->setFlash('danger',$e->getMessage()); $response->redirect('/remote-support'); }
     }
-
-    /**
-     * AJAX API: Poll new signals
-     */
-    public function apiSignalGet(Request $request, Response $response, string $code): void
+    public function enroll(Request $request, Response $response): void
     {
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Session not found'], 404);
-            return;
-        }
-
-        $forType = trim($request->input('for_type') ?? 'STAFF');
-        $afterId = (int)($request->input('after_id') ?? 0);
-
-        $signals = $this->remoteModel->getSignals((int)$session['id'], $forType, $afterId);
-
-        $response->json([
-            'success'        => true,
-            'signals'        => $signals,
-            'session_status' => $session['status'],
-            'ultraviewer_id' => $session['ultraviewer_id'],
-            'ultraviewer_pass' => $session['ultraviewer_pass']
-        ]);
+        $this->api($response,function() use($request) {
+            $config=RemoteSecurity::config();
+            return $this->model->enroll((string)$request->input('enrollment'),(string)$request->input('name','Windows PC')) +
+                ['url'=>$config['public_url']];
+        });
     }
-
-    /**
-     * AJAX API: Update session status (CONNECTED, ENDED, REJECTED)
-     */
-    public function apiUpdateStatus(Request $request, Response $response, string $code): void
+    public function package(Request $request, Response $response): void
     {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) {
-                    $body = $decoded;
-                }
-            }
-        }
-        $status = trim($body['status'] ?? '');
-
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session || !in_array($status, ['WAITING', 'CONNECTED', 'ENDED', 'REJECTED'])) {
-            $response->json(['success' => false, 'message' => 'Invalid parameters'], 400);
-            return;
-        }
-
-        $this->remoteModel->updateStatus((int)$session['id'], $status);
-
-        // If ended, post signal to peer
-        $senderType = (Auth::id() === (int)$session['staff_id']) ? 'STAFF' : 'CLIENT';
-        $this->remoteModel->addSignal((int)$session['id'], $senderType, 'STATUS', json_encode(['status' => $status]));
-
-        $response->json(['success' => true]);
+        $path=dirname(__DIR__,2).'/public/agent/TaskFlow-Agent.zip';
+        if (!is_file($path)) { $response->json(['success'=>false,'message'=>'Agent package has not been built.'],503); return; }
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="TaskFlow-Agent.zip"');
+        header('Content-Length: '.filesize($path)); readfile($path);
     }
-
-    /**
-     * AJAX API: Save UltraViewer credentials from client
-     */
-    public function apiSaveUltraviewer(Request $request, Response $response, string $code): void
+    public function agentPoll(Request $request, Response $response): void
     {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) {
-                    $body = $decoded;
-                }
-            }
-        }
-        $uvId = trim($body['ultraviewer_id'] ?? '');
-        $uvPass = trim($body['ultraviewer_pass'] ?? '');
-
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Session not found'], 404);
-            return;
-        }
-
-        $this->remoteModel->updateUltraviewer((int)$session['id'], $uvId, $uvPass);
-
-        // Notify staff via signal
-        $this->remoteModel->addSignal(
-            (int)$session['id'], 
-            'CLIENT', 
-            'ULTRAVIEWER', 
-            json_encode(['id' => $uvId, 'pass' => $uvPass])
-        );
-
-        $response->json(['success' => true]);
+        $this->api($response,function() use($request) {
+            $s=$this->model->agentPoll($this->agent()); $config=RemoteSecurity::config();
+            return ($s ? $this->sessionData($s,'agent',(int)$request->input('after_id',0)) : ['session'=>null,'signals'=>[]]) +
+                ['config'=>['relayUrl'=>$config['relay_url'],'iceServers'=>$config['ice_servers']]];
+        });
     }
-
-    /**
-     * Polling API for global navbar popup
-     */
-    public function apiCheckPending(Request $request, Response $response): void
+    public function agentAction(Request $request, Response $response): void
     {
-        $user = Auth::user();
-        if (!$user) {
-            $response->json(['pending' => null]);
-            return;
-        }
-
-        $pending = $this->remoteModel->findActiveForClient((int)$user['id']);
-        $response->json(['pending' => $pending]);
+        $this->api($response,function() use($request) {
+            $device=$this->agent(); $action=(string)$request->input('action');
+            if ($action==='revoke') { $this->model->revoke((int)$device['id'],(int)$device['client_id']); return []; }
+            $s=$this->authorized((string)$request->input('session_code'),true);
+            if ($action==='accept' || $action==='deny') $this->model->decide($s,$action);
+            elseif ($action==='connected') $this->model->connected($s,(string)$request->input('transport'));
+            elseif ($action==='end') $this->model->end($s);
+            elseif ($action==='signal') $this->model->signal($s,'CLIENT',(string)$request->input('signal_type'),(array)$request->input('payload',[]));
+            else throw new DomainException('Invalid agent action.');
+            return [];
+        });
     }
-
-    /**
-     * AJAX API: IT Staff dispatches mouse/keyboard control event
-     */
-    public function apiControlEvent(Request $request, Response $response): void
+    public function viewerPoll(Request $request, Response $response, string $code): void
     {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) $body = $decoded;
-            }
-        }
-
-        $code = trim($body['session_code'] ?? '');
-        $eventType = trim($body['event_type'] ?? '');
-        $payload = $body['payload'] ?? [];
-
-        if (!$code || !$eventType) {
-            $response->json(['success' => false, 'message' => 'Missing parameters'], 400);
-            return;
-        }
-
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Session not found'], 404);
-            return;
-        }
-
-        $insertId = $this->remoteModel->addControlEvent((int)$session['id'], $eventType, is_array($payload) ? $payload : ['value' => $payload]);
-        $response->json(['success' => true, 'event_id' => $insertId]);
+        $this->api($response,function() use($request,$code) {
+            $s=$this->viewer($code); $this->model->viewerSeen($s);
+            return $this->sessionData($s,'viewer',(int)$request->input('after_id',0));
+        });
     }
-
-    /**
-     * External Agent API: Poll pending mouse/keyboard events (called by PowerShell Agent)
-     */
-    public function apiControlPoll(Request $request, Response $response, string $code): void
+    public function viewerSignal(Request $request, Response $response): void
     {
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Session not found'], 404);
-            return;
-        }
-
-        $sessionId = (int)$session['id'];
-        $afterId = (int)($request->input('after_id') ?? 0);
-        $latestId = $this->remoteModel->getLatestControlEventId($sessionId);
-
-        // Update heartbeat passively
-        $this->remoteModel->updateAgentHeartbeat($sessionId);
-
-        // When agent first starts (after_id == 0), sync directly to latest ID to skip stale backlog
-        if ($afterId === 0) {
-            $response->json([
-                'success' => true,
-                'events'  => [],
-                'latest_id' => $latestId,
-                'session_status' => $session['status']
-            ]);
-            return;
-        }
-
-        $events = $this->remoteModel->getPendingControlEvents($sessionId, $afterId);
-
-        // Coalesce high-frequency MOUSE_MOVE events so the queue never lags behind
-        $filteredEvents = [];
-        $lastMouseMove = null;
-        foreach ($events as $ev) {
-            if ($ev['event_type'] === 'MOUSE_MOVE') {
-                $lastMouseMove = $ev;
-            } else {
-                if ($lastMouseMove !== null) {
-                    $filteredEvents[] = $lastMouseMove;
-                    $lastMouseMove = null;
-                }
-                $filteredEvents[] = $ev;
-            }
-        }
-        if ($lastMouseMove !== null) {
-            $filteredEvents[] = $lastMouseMove;
-        }
-
-        $response->json([
-            'success' => true,
-            'events'  => $filteredEvents,
-            'latest_id' => $latestId,
-            'session_status' => $session['status']
-        ]);
+        $this->api($response,function() use($request) {
+            $s=$this->viewer((string)$request->input('session_code'));
+            $this->model->signal($s,'STAFF',(string)$request->input('signal_type'),(array)$request->input('payload',[])); return [];
+        });
     }
-
-    /**
-     * External Agent API: Report presence & resolution
-     */
-    public function apiControlHeartbeat(Request $request, Response $response, string $code): void
+    public function end(Request $request, Response $response): void
     {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) $body = $decoded;
-            }
-        }
-
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Session not found'], 404);
-            return;
-        }
-
-        $res = trim($body['resolution'] ?? '1920x1080');
-        $this->remoteModel->updateAgentHeartbeat((int)$session['id'], $res);
-
-        $response->json(['success' => true]);
+        $this->api($response,function() use($request) { $this->model->end($this->authorized((string)$request->input('session_code'))); return []; });
     }
-
-    /**
-     * AJAX API: Check if client's Agent is running
-     */
-    public function apiControlStatus(Request $request, Response $response, string $code): void
+    public function revoke(Request $request, Response $response): void
     {
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Session not found'], 404);
-            return;
-        }
-
-        $status = $this->remoteModel->getAgentStatus((int)$session['id']);
-        $response->json(array_merge(['success' => true], $status));
-    }
-
-    /**
-     * Download custom pre-configured TaskFlow-Agent.bat for this session
-     */
-    public function downloadAgent(Request $request, Response $response, string $code): void
-    {
-        $session = $this->remoteModel->findByCode($code);
-        if (!$session) {
-            $response->redirect('/remote-support');
-            return;
-        }
-
-        $cleanCode = htmlspecialchars($session['session_code']);
-        $isHttps = (
-            (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
-            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ||
-            (isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'onrender.com'))
-        );
-        $proto = $isHttps ? 'https' : 'http';
-        $host = $proto . "://" . ($_SERVER['HTTP_HOST'] ?? 'baodh.onrender.com');
-
-        $ps1Path = dirname(__DIR__, 2) . '/public/agent/TaskFlow-Agent.ps1';
-        $ps1Content = file_exists($ps1Path) ? file_get_contents($ps1Path) : '';
-
-        if (!empty($ps1Content)) {
-            // Self-contained hybrid BAT + PowerShell script (Runs 100% locally with zero internet dependencies)
-            $batContent = "<# :\r\n";
-            $batContent .= "@echo off\r\n";
-            $batContent .= "setlocal\r\n";
-            $batContent .= "chcp 65001 >nul\r\n";
-            $batContent .= "title TaskFlow Remote Desktop Agent - {$cleanCode}\r\n";
-            $batContent .= "color 0B\r\n";
-            $batContent .= "echo ============================================================\r\n";
-            $batContent .= "echo       TASKFLOW ENTERPRISE REMOTE DESKTOP AGENT v2.0\r\n";
-            $batContent .= "echo ============================================================\r\n";
-            $batContent .= "echo Dang khoi dong va ket noi toi Ky thuat vien IT...\r\n";
-            $batContent .= "echo Phien ket noi: {$cleanCode}\r\n";
-            $batContent .= "echo May chu: {$host}\r\n";
-            $batContent .= "echo ------------------------------------------------------------\r\n";
-            $batContent .= "powershell -NoProfile -ExecutionPolicy Bypass -Command \"\$s='{$cleanCode}'; \$h='{$host}'; Invoke-Expression ([System.IO.File]::ReadAllText('%~f0'))\"\r\n";
-            $batContent .= "goto :eof\r\n";
-            $batContent .= "#>\r\n";
-            $batContent .= $ps1Content;
-        } else {
-            // Fallback to online fetch if file missing
-            $batContent = "@echo off\r\n";
-            $batContent .= "chcp 65001 >nul\r\n";
-            $batContent .= "title TaskFlow Remote Desktop Agent - {$cleanCode}\r\n";
-            $batContent .= "color 0B\r\n";
-            $batContent .= "echo Dang khoi dong va ket noi toi Ky thuat vien IT...\r\n";
-            $batContent .= "powershell -NoProfile -ExecutionPolicy Bypass -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \$s='{$cleanCode}'; \$h='{$host}'; iex (irm '{$host}/public/agent/TaskFlow-Agent.ps1')\"\r\n";
-            $batContent .= "pause\r\n";
-        }
-
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="TaskFlow-Agent-' . $cleanCode . '.bat"');
-        header('Content-Length: ' . strlen($batContent));
-        echo $batContent;
-        exit;
-    }
-
-    // =========================================================================
-    // noVNC + WEBSOCKIFY + TIGHTVNC METHODS (REQUEST -> ACCEPT -> CONTROL)
-    // =========================================================================
-
-    /**
-     * IT requests remote control for a ticket
-     */
-    public function vncRequest(Request $request, Response $response): void
-    {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) $body = $decoded;
-            }
-        }
-
-        $ticketId = (int)($body['ticket_id'] ?? 0);
-        $wsUrl = trim($body['ws_url'] ?? 'http://127.0.0.1:6080/vnc_lite.html');
-        $sessionPass = trim($body['session_pass'] ?? '123456');
-
-        if (!$ticketId) {
-            $response->json(['success' => false, 'message' => 'Thiếu ID Ticket'], 400);
-            return;
-        }
-
-        $ticketModel = new Ticket();
-        $ticket = $ticketModel->findById($ticketId);
-        if (!$ticket) {
-            $response->json(['success' => false, 'message' => 'Không tìm thấy Ticket'], 404);
-            return;
-        }
-
-        $itUser = Auth::user();
-        $enduserId = (int)$ticket['requester_id'];
-
-        $sessionId = $this->remoteModel->createVncRequest($ticketId, (int)$itUser['id'], $enduserId, $wsUrl, $sessionPass);
-
-        // Notify enduser via in-app notification
-        $notif = new Notification();
-        $notif->create([
-            'user_id'   => $enduserId,
-            'ticket_id' => $ticketId,
-            'title'     => "🖥️ Yêu cầu điều khiển noVNC từ IT {$itUser['full_name']}",
-            'message'   => "Kỹ thuật viên muốn điều khiển máy tính của bạn qua noVNC để xử lý sự cố. Vui lòng bấm để chấp nhận.",
-            'type'      => 'remote',
-            'link'      => "/tickets/{$ticketId}"
-        ]);
-
-        $response->json([
-            'success'    => true,
-            'session_id' => $sessionId,
-            'message'    => 'Đã gửi yêu cầu điều khiển tới người dùng'
-        ]);
-    }
-
-    /**
-     * Enduser checks for incoming noVNC requests (AJAX polling every 2s)
-     */
-    public function vncCheckRequest(Request $request, Response $response): void
-    {
-        $user = Auth::user();
-        if (!$user) {
-            $response->json(['has_request' => false]);
-            return;
-        }
-
-        $userId = (int)$user['id'];
-        $pending = $this->remoteModel->getPendingVncRequestForUser($userId);
-
-        // If not found for enduser, check if user is IT/Admin testing on 1 machine
-        if (!$pending && (Auth::isAdmin() || Auth::isStaff())) {
-            $pending = $this->remoteModel->getPendingVncRequestForIt($userId);
-        }
-
-        if ($pending) {
-            $response->json([
-                'has_request' => true,
-                'request'     => $pending
-            ]);
-        } else {
-            $response->json(['has_request' => false]);
-        }
-    }
-
-    /**
-     * Enduser responds (accept / reject)
-     */
-    public function vncRespond(Request $request, Response $response): void
-    {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) $body = $decoded;
-            }
-        }
-
-        $sessionId = (int)($body['session_id'] ?? 0);
-        $action = trim($body['action'] ?? ''); // 'accept' or 'reject'
-
-        if (!$sessionId || !in_array($action, ['accept', 'reject'])) {
-            $response->json(['success' => false, 'message' => 'Tham số không hợp lệ'], 400);
-            return;
-        }
-
-        $session = $this->remoteModel->getVncSession($sessionId);
-        if (!$session) {
-            $response->json(['success' => false, 'message' => 'Không tìm thấy phiên'], 404);
-            return;
-        }
-
-        $user = Auth::user();
-        if (!$user) {
-            $response->json(['success' => false, 'message' => 'Chưa đăng nhập'], 401);
-            return;
-        }
-
-        $userId = (int)$user['id'];
-        $isEndUser = ($userId === (int)$session['enduser_id']);
-
-        if (!$isEndUser) {
-            $response->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện thao tác này'], 403);
-            return;
-        }
-
-        if (($session['status'] ?? '') !== 'pending') {
-            $response->json(['success' => false, 'message' => 'Yeu cau da duoc xu ly hoac da ket thuc'], 409);
-            return;
-        }
-        if (!empty($session['expires_at']) && strtotime($session['expires_at']) < time()) {
-            $this->remoteModel->updateVncStatus($sessionId, 'expired');
-            $response->json(['success' => false, 'message' => 'Yeu cau da het han 30 giay va tu huy'], 410);
-            return;
-        }
-        $newStatus = ($action === 'accept') ? 'accepted' : 'rejected';
-        $this->remoteModel->updateVncStatus($sessionId, $newStatus);
-
-        $response->json([
-            'success' => true,
-            'status'  => $newStatus
-        ]);
-    }
-
-    /**
-     * IT checks session status (polling check_session_status every 2s)
-     */
-    public function vncSessionStatus(Request $request, Response $response, string $id): void
-    {
-        $session = $this->remoteModel->getVncSession((int)$id);
-        if (!$session) {
-            $response->json(['status' => 'not_found'], 404);
-            return;
-        }
-
-        // Build noVNC iframe URL
-        $wsUrl = $session['ws_url'];
-        $pass = urlencode($session['session_pass']);
-        if (($session['status'] ?? '') === 'pending' && $this->remoteModel->expireVncSessionIfNeeded((int)$id)) {
-            $session['status'] = 'expired';
-        }
-        $iframeUrl = ($session['status'] === 'accepted') ? $wsUrl . '?scale=true&view_only=false&password=' . $pass : '';
-
-        $response->json([
-            'status'       => $session['status'],
-            'ws_url'       => $session['ws_url'],
-            'session_pass' => $session['session_pass'],
-            'iframe_url'   => $iframeUrl,
-            'it_name'      => $session['it_name'],
-            'enduser_name' => $session['enduser_name']
-        ]);
-    }
-
-    /**
-     * End session (called by either IT or Enduser)
-     */
-    public function vncEnd(Request $request, Response $response): void
-    {
-        $body = $request->getBody();
-        if (empty($body)) {
-            $raw = file_get_contents('php://input');
-            if (!empty($raw)) {
-                $decoded = json_decode($raw, true);
-                if (is_array($decoded)) $body = $decoded;
-            }
-        }
-
-        $sessionId = (int)($body['session_id'] ?? 0);
-        if ($sessionId) {
-            $this->remoteModel->updateVncStatus($sessionId, 'ended');
-        }
-
-        $response->json(['success' => true]);
+        $this->api($response,function() use($request) { $this->model->revoke((int)$request->input('device_id'),Auth::id()); return []; });
     }
 }

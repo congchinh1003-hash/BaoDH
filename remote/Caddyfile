@@ -1,0 +1,6 @@
+{$TASKFLOW_DOMAIN} {
+    reverse_proxy app:80
+}
+{$REMOTE_RELAY_DOMAIN} {
+    reverse_proxy relay:8081
+}

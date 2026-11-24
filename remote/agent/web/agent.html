@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><title>TaskFlow desktop transport</title></head><body>
+<script src="remote-transport.js"></script><script>
+'use strict';
+let peer=null,started=null,signalQueue=Promise.resolve();
+const bridge=message=>window.chrome.webview.postMessage({...message,sessionCode:started?.sessionCode});
+function agentStart(options){agentStop();started=options;}
+async function agentPoll(data){
+    if(!started)return;
+    if(!peer&&data.relay_ticket){const sessionCode=started.sessionCode,send=message=>window.chrome.webview.postMessage({...message,sessionCode});
+        peer=new TaskFlowTransport({...started.config,role:'agent',ticket:data.relay_ticket,
+        onSignal:(type,payload)=>send({kind:'signal',type,payload}),onReady:transport=>send({kind:'ready',transport}),
+        onInput:input=>send(input),onError:message=>send({kind:'error',message})});}
+    if(!peer)return;
+    peer.updateTicket(data.relay_ticket);
+    signalQueue=signalQueue.then(async()=>{for(const signal of data.signals)await peer.acceptSignal(signal.signal_type,signal.payload);}).catch(error=>bridge({kind:'error',message:error.message}));
+}
+function agentFrame(base64){peer?.sendFrame(base64);}
+function agentStop(){peer?.close();peer=null;started=null;signalQueue=Promise.resolve();}
+bridge({kind:'initialized'});
+</script></body></html>

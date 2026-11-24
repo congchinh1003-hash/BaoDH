@@ -1,447 +1,208 @@
 <?php
-
 namespace App\Models;
 
 use App\Core\Database;
-use App\Core\Model;
+use App\Services\RemoteSecurity;
+use DomainException;
 use PDO;
 
-class RemoteSession extends Model
+/** Existing session table retained; screen frames never enter the database. Times are UTC. */
+class RemoteSession
 {
-    public function __construct()
+    private PDO $db;
+    public function __construct(?PDO $db = null)
     {
-        parent::__construct();
-        self::ensureTablesExist();
+        $this->db = $db ?? Database::getConnection();
+        if ($db === null) self::ensureTablesExist();
     }
-
     public static function ensureTablesExist(): void
     {
         static $checked = false;
         if ($checked) return;
-        $checked = true;
-
         $db = Database::getConnection();
-        try {
-            $db->exec("
-                CREATE TABLE IF NOT EXISTS `remote_support_sessions` (
-                    `id` INT AUTO_INCREMENT PRIMARY KEY,
-                    `session_code` VARCHAR(20) NOT NULL UNIQUE,
-                    `ticket_id` INT NULL,
-                    `staff_id` INT NOT NULL,
-                    `client_id` INT NOT NULL,
-                    `status` VARCHAR(30) NOT NULL DEFAULT 'WAITING',
-                    `notes` TEXT NULL,
-                    `ultraviewer_id` VARCHAR(50) NULL,
-                    `ultraviewer_pass` VARCHAR(50) NULL,
-                    `started_at` DATETIME NULL,
-                    `ended_at` DATETIME NULL,
-                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    INDEX `idx_code` (`session_code`),
-                    INDEX `idx_ticket` (`ticket_id`),
-                    INDEX `idx_status` (`status`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            ");
-            $db->exec("
-                CREATE TABLE IF NOT EXISTS `remote_support_signals` (
-                    `id` INT AUTO_INCREMENT PRIMARY KEY,
-                    `session_id` INT NOT NULL,
-                    `sender_type` VARCHAR(20) NOT NULL,
-                    `signal_type` VARCHAR(30) NOT NULL,
-                    `payload` LONGTEXT NOT NULL,
-                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    INDEX `idx_session_sig` (`session_id`, `id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            ");
-            $db->exec("
-                CREATE TABLE IF NOT EXISTS `remote_support_control_events` (
-                    `id` INT AUTO_INCREMENT PRIMARY KEY,
-                    `session_id` INT NOT NULL,
-                    `event_type` VARCHAR(30) NOT NULL,
-                    `payload` TEXT NOT NULL,
-                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    INDEX `idx_ctrl_sess` (`session_id`, `id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            ");
-            $db->exec("
-                CREATE TABLE IF NOT EXISTS `remote_sessions` (
-                    `id` INT AUTO_INCREMENT PRIMARY KEY,
-                    `ticket_id` INT NOT NULL,
-                    `it_id` INT NOT NULL,
-                    `enduser_id` INT NOT NULL,
-                    `ws_url` VARCHAR(255) NOT NULL DEFAULT 'ws://127.0.0.1:6080',
-                    `session_pass` VARCHAR(50) NOT NULL DEFAULT '123456',
-                    `status` ENUM('pending', 'accepted', 'rejected', 'ended', 'expired') DEFAULT 'pending',
-                    `expires_at` DATETIME NULL,
-                    `responded_at` DATETIME NULL,
-                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    INDEX `idx_rs_ticket` (`ticket_id`),
-                    INDEX `idx_rs_status` (`status`),
-                    INDEX `idx_rs_user` (`enduser_id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            ");
-            try {
-                $db->exec("ALTER TABLE `remote_support_sessions` ADD COLUMN `agent_online` TINYINT(1) DEFAULT 0, ADD COLUMN `agent_resolution` VARCHAR(30) NULL, ADD COLUMN `agent_last_seen` DATETIME NULL, ADD COLUMN `ws_url` VARCHAR(255) NULL, ADD COLUMN `session_pass` VARCHAR(50) NULL");
-            } catch (\Throwable $e) {}
-        } catch (\Throwable $e) {
-            error_log("RemoteSession ensureTablesExist notice: " . $e->getMessage());
+        $db->exec("CREATE TABLE IF NOT EXISTS remote_support_sessions (
+            id INT AUTO_INCREMENT PRIMARY KEY, session_code VARCHAR(20) NOT NULL UNIQUE,
+            ticket_id INT NULL, staff_id INT NOT NULL, client_id INT NOT NULL,
+            status VARCHAR(30) NOT NULL DEFAULT 'WAITING', notes TEXT NULL,
+            started_at DATETIME NULL, ended_at DATETIME NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $columns = $db->query('SHOW COLUMNS FROM remote_support_sessions')->fetchAll(PDO::FETCH_COLUMN);
+        foreach (['device_id' => 'INT NULL', 'operator_device' => 'VARCHAR(64) NULL',
+            'approved_at' => 'DATETIME NULL', 'expires_at' => 'DATETIME NULL',
+            'agent_seen_at' => 'DATETIME NULL', 'viewer_seen_at' => 'DATETIME NULL',
+            'transport' => 'VARCHAR(20) NULL', 'end_reason' => 'VARCHAR(60) NULL'] as $name => $type) {
+            if (!in_array($name, $columns, true)) $db->exec("ALTER TABLE remote_support_sessions ADD COLUMN $name $type");
         }
+        $db->exec("CREATE TABLE IF NOT EXISTS remote_agent_devices (
+            id INT AUTO_INCREMENT PRIMARY KEY, client_id INT NOT NULL, name VARCHAR(100) NOT NULL,
+            enrollment_hash VARCHAR(64) NULL UNIQUE, enrollment_expires DATETIME NULL,
+            token_hash VARCHAR(64) NULL UNIQUE, last_seen DATETIME NULL,
+            revoked_at DATETIME NULL, created_at DATETIME NOT NULL,
+            INDEX idx_remote_device_client (client_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $db->exec("CREATE TABLE IF NOT EXISTS remote_access_grants (
+            device_id INT NOT NULL, staff_id INT NOT NULL, operator_device VARCHAR(64) NOT NULL,
+            granted_at DATETIME NOT NULL, revoked_at DATETIME NULL,
+            PRIMARY KEY(device_id, staff_id, operator_device)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $db->exec("CREATE TABLE IF NOT EXISTS remote_support_signals (
+            id INT AUTO_INCREMENT PRIMARY KEY, session_id INT NOT NULL,
+            sender_type VARCHAR(20) NOT NULL, signal_type VARCHAR(30) NOT NULL,
+            payload LONGTEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_session_sig(session_id, id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $checked = true;
     }
-
-    public function createSession(int $staffId, int $clientId, ?int $ticketId = null, ?string $notes = null): array
+    private function run(string $sql, array $params = []): \PDOStatement
     {
-        $pin = (string)random_int(100000, 999999);
-        $code = 'REM-' . $pin;
-
-        $stmt = $this->db->prepare("
-            INSERT INTO remote_support_sessions (session_code, ticket_id, staff_id, client_id, status, notes)
-            VALUES (:session_code, :ticket_id, :staff_id, :client_id, 'WAITING', :notes)
-        ");
-        $stmt->execute([
-            'session_code' => $code,
-            'ticket_id'    => $ticketId,
-            'staff_id'     => $staffId,
-            'client_id'    => $clientId,
-            'notes'        => $notes
-        ]);
-
-        return $this->findByCode($code) ?? ['id' => (int)$this->db->lastInsertId(), 'session_code' => $code];
+        $stmt = $this->db->prepare($sql); $stmt->execute($params); return $stmt;
     }
-
+    private function now(): string { return gmdate('Y-m-d H:i:s'); }
+    public function devices(int $clientId): array
+    {
+        return $this->run('SELECT id,name,last_seen,token_hash IS NOT NULL AS enrolled FROM remote_agent_devices WHERE client_id=? AND revoked_at IS NULL ORDER BY id DESC', [$clientId])->fetchAll(PDO::FETCH_ASSOC);
+    }
+    public function issueEnrollment(int $clientId): array
+    {
+        $token = RemoteSecurity::token();
+        $this->run('INSERT INTO remote_agent_devices (client_id,name,enrollment_hash,enrollment_expires,created_at) VALUES (?,?,?,?,?)',
+            [$clientId, 'Windows PC', RemoteSecurity::hash($token), gmdate('Y-m-d H:i:s', time()+900), $this->now()]);
+        return ['id' => (int)$this->db->lastInsertId(), 'token' => $token];
+    }
+    public function enroll(string $enrollment, string $name): array
+    {
+        $token = RemoteSecurity::token(); $hash = RemoteSecurity::hash($enrollment);
+        $changed = $this->run('UPDATE remote_agent_devices SET token_hash=?,name=?,enrollment_hash=NULL WHERE enrollment_hash=? AND enrollment_expires>? AND revoked_at IS NULL',
+            [RemoteSecurity::hash($token), mb_substr($name,0,100), $hash, $this->now()])->rowCount();
+        if ($changed !== 1) throw new DomainException('Enrollment is invalid, expired, or already used.');
+        $device = $this->authenticate($token);
+        return ['device_id' => (int)$device['id'], 'token' => $token];
+    }
+    public function authenticate(string $token): array
+    {
+        if (!preg_match('/^[a-f0-9]{64}$/D', $token)) throw new DomainException('Invalid agent credential.');
+        $row = $this->run('SELECT * FROM remote_agent_devices WHERE token_hash=? AND revoked_at IS NULL', [RemoteSecurity::hash($token)])->fetch(PDO::FETCH_ASSOC);
+        if (!$row) throw new DomainException('Invalid agent credential.');
+        return $row;
+    }
+    public function createSession(int $staffId, int $clientId, ?int $ticketId, ?string $notes, string $operatorDevice, ?int $deviceId = null): array
+    {
+        $devices = array_values(array_filter($this->devices($clientId), fn($d) => (bool)$d['enrolled']));
+        if ($deviceId === null && count($devices) !== 1) throw new DomainException('Select an enrolled PC in Remote Support. The user must install the agent once.');
+        $deviceId ??= (int)$devices[0]['id'];
+        $device = $this->run('SELECT * FROM remote_agent_devices WHERE id=? AND client_id=? AND token_hash IS NOT NULL AND revoked_at IS NULL', [$deviceId, $clientId])->fetch(PDO::FETCH_ASSOC);
+        if (!$device) throw new DomainException('The selected PC does not belong to this user.');
+        $this->db->beginTransaction();
+        try {
+            $this->run('UPDATE remote_agent_devices SET name=name WHERE id=?', [$deviceId]);
+            $this->expireStale();
+            $busy = $this->run("SELECT id FROM remote_support_sessions WHERE device_id=? AND status IN ('WAITING','ACCEPTED','CONNECTED')", [$deviceId])->fetchColumn();
+            if ($busy) throw new DomainException('This PC already has a support session. End it before starting another.');
+            $code = 'REM-' . strtoupper(bin2hex(random_bytes(8)));
+            $this->run("INSERT INTO remote_support_sessions (session_code,ticket_id,staff_id,client_id,device_id,operator_device,status,notes,created_at,expires_at) VALUES (?,?,?,?,?,?,'WAITING',?,?,?)",
+                [$code,$ticketId,$staffId,$clientId,$deviceId,$operatorDevice,$notes,$this->now(),gmdate('Y-m-d H:i:s',time()+300)]);
+            $this->db->commit(); return $this->findByCode($code);
+        } catch (\Throwable $e) { $this->db->rollBack(); throw $e; }
+    }
     public function findByCode(string $code): ?array
     {
-        $code = trim(strtoupper($code));
-        $prefixed = str_starts_with($code, 'REM-') ? $code : ('REM-' . $code);
-        $stmt = $this->db->prepare("
-            SELECT s.*, 
-                   COALESCE(st.full_name, 'Chưa có kỹ thuật viên') as staff_name, 
-                   st.email as staff_email, st.username as staff_username,
-                   cl.full_name as client_name, cl.email as client_email, cl.department as client_department,
-                   t.ticket_code, t.title as ticket_title
-            FROM remote_support_sessions s
-            LEFT JOIN users st ON s.staff_id = st.id
-            JOIN users cl ON s.client_id = cl.id
-            LEFT JOIN tickets t ON s.ticket_id = t.id
-            WHERE s.session_code = :code OR s.session_code = :prefixed
-            LIMIT 1
-        ");
-        $stmt->execute([
-            'code'     => $code,
-            'prefixed' => $prefixed
-        ]);
-        return $stmt->fetch() ?: null;
+        $row = $this->run('SELECT s.*,st.full_name AS staff_name,cl.full_name AS client_name,d.name AS device_name FROM remote_support_sessions s LEFT JOIN users st ON st.id=s.staff_id JOIN users cl ON cl.id=s.client_id LEFT JOIN remote_agent_devices d ON d.id=s.device_id WHERE s.session_code=?', [strtoupper(trim($code))])->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
-
     public function findActiveForTicket(int $ticketId): ?array
     {
-        $stmt = $this->db->prepare("
-            SELECT s.*, COALESCE(st.full_name, 'Chưa có kỹ thuật viên') as staff_name, cl.full_name as client_name
-            FROM remote_support_sessions s
-            LEFT JOIN users st ON s.staff_id = st.id
-            JOIN users cl ON s.client_id = cl.id
-            WHERE s.ticket_id = :ticket_id AND s.status IN ('WAITING', 'CONNECTED')
-            ORDER BY s.id DESC LIMIT 1
-        ");
-        $stmt->execute(['ticket_id' => $ticketId]);
-        return $stmt->fetch() ?: null;
+        $this->expireStale();
+        $code = $this->run("SELECT session_code FROM remote_support_sessions WHERE ticket_id=? AND device_id IS NOT NULL AND status IN ('WAITING','ACCEPTED','CONNECTED') ORDER BY id DESC LIMIT 1", [$ticketId])->fetchColumn();
+        return $code ? $this->findByCode($code) : null;
     }
-
-    public function findActiveForClient(int $clientId): ?array
+    public function recent(int $userId, bool $staff): array
     {
-        $stmt = $this->db->prepare("
-            SELECT s.*, COALESCE(st.full_name, 'Chưa có kỹ thuật viên') as staff_name, t.ticket_code, t.title as ticket_title
-            FROM remote_support_sessions s
-            LEFT JOIN users st ON s.staff_id = st.id
-            LEFT JOIN tickets t ON s.ticket_id = t.id
-            WHERE s.client_id = :client_id AND s.status = 'WAITING'
-            ORDER BY s.id DESC LIMIT 1
-        ");
-        $stmt->execute(['client_id' => $clientId]);
-        return $stmt->fetch() ?: null;
+        $this->expireStale();
+        return $this->run('SELECT s.*,st.full_name AS staff_name,cl.full_name AS client_name,d.name AS device_name FROM remote_support_sessions s LEFT JOIN users st ON st.id=s.staff_id JOIN users cl ON cl.id=s.client_id LEFT JOIN remote_agent_devices d ON d.id=s.device_id WHERE ' . ($staff ? 's.staff_id' : 's.client_id') . '=? ORDER BY s.id DESC LIMIT 50', [$userId])->fetchAll(PDO::FETCH_ASSOC);
     }
-
-    public function findOrCreateActiveForClient(int $clientId): array
+    public function hasGrant(array $s): bool
     {
-        $existing = $this->findActiveForClient($clientId);
-        if ($existing) {
-            return $existing;
+        return (bool)$this->run('SELECT 1 FROM remote_access_grants WHERE device_id=? AND staff_id=? AND operator_device=? AND revoked_at IS NULL', [$s['device_id'],$s['staff_id'],$s['operator_device']])->fetchColumn();
+    }
+    public function agentPoll(array $device): ?array
+    {
+        $this->expireStale();
+        $this->run('UPDATE remote_agent_devices SET last_seen=? WHERE id=?', [$this->now(),$device['id']]);
+        $code = $this->run("SELECT session_code FROM remote_support_sessions WHERE device_id=? AND status IN ('WAITING','ACCEPTED','CONNECTED') ORDER BY id DESC LIMIT 1", [$device['id']])->fetchColumn();
+        if (!$code) return null;
+        $s = $this->findByCode($code);
+        $this->run('UPDATE remote_support_sessions SET agent_seen_at=? WHERE id=?', [$this->now(),$s['id']]);
+        $s['trusted'] = $this->hasGrant($s); return $s;
+    }
+    public function decide(array $s, string $action): void
+    {
+        if ($s['status'] !== 'WAITING' || $s['expires_at'] <= $this->now()) throw new DomainException('Session is no longer waiting for consent.');
+        if ($action === 'deny') { $this->end($s, 'REJECTED', 'user_denied'); return; }
+        if ($action !== 'accept') throw new DomainException('Invalid consent decision.');
+        $this->db->beginTransaction();
+        try {
+            $this->run('UPDATE remote_agent_devices SET name=name WHERE id=?', [$s['device_id']]);
+            $changed = $this->run("UPDATE remote_support_sessions SET status='ACCEPTED',approved_at=?,agent_seen_at=? WHERE id=? AND status='WAITING' AND expires_at>?", [$this->now(),$this->now(),$s['id'],$this->now()])->rowCount();
+            if ($changed !== 1) throw new DomainException('Session is no longer waiting for consent.');
+            $this->run('DELETE FROM remote_access_grants WHERE device_id=? AND staff_id=? AND operator_device=?', [$s['device_id'],$s['staff_id'],$s['operator_device']]);
+            $this->run('INSERT INTO remote_access_grants (device_id,staff_id,operator_device,granted_at) VALUES (?,?,?,?)', [$s['device_id'],$s['staff_id'],$s['operator_device'],$this->now()]);
+            $this->db->commit();
+        } catch (\Throwable $e) { $this->db->rollBack(); throw $e; }
+    }
+    public function connected(array $s, string $transport): void
+    {
+        if (!in_array($transport,['p2p','relay'],true) || !in_array($s['status'],['ACCEPTED','CONNECTED'],true) || !$this->hasGrant($s)) throw new DomainException('Consent is required before sharing.');
+        $this->run("UPDATE remote_support_sessions SET status='CONNECTED',started_at=COALESCE(started_at,?),transport=? WHERE id=? AND status IN ('ACCEPTED','CONNECTED')", [$this->now(),$transport,$s['id']]);
+    }
+    public function end(array $s, string $status = 'ENDED', string $reason = 'disconnected'): void
+    {
+        $this->run("UPDATE remote_support_sessions SET status=?,ended_at=?,end_reason=? WHERE id=? AND status IN ('WAITING','ACCEPTED','CONNECTED')", [$status,$this->now(),$reason,$s['id']]);
+        $this->run('DELETE FROM remote_support_signals WHERE session_id=?', [$s['id']]);
+    }
+    public function revoke(int $deviceId, int $clientId): void
+    {
+        if (!$this->run('SELECT id FROM remote_agent_devices WHERE id=? AND client_id=?', [$deviceId,$clientId])->fetchColumn()) throw new DomainException('PC does not belong to you.');
+        $this->db->beginTransaction();
+        try {
+            $this->run('UPDATE remote_agent_devices SET name=name WHERE id=?', [$deviceId]);
+            $this->run('UPDATE remote_access_grants SET revoked_at=? WHERE device_id=?', [$this->now(),$deviceId]);
+            $this->run("UPDATE remote_support_sessions SET status='ENDED',ended_at=?,end_reason='access_revoked' WHERE device_id=? AND status IN ('WAITING','ACCEPTED','CONNECTED')", [$this->now(),$deviceId]);
+            $this->run('DELETE FROM remote_support_signals WHERE session_id IN (SELECT id FROM remote_support_sessions WHERE device_id=?)', [$deviceId]);
+            $this->db->commit();
+        } catch (\Throwable $e) { $this->db->rollBack(); throw $e; }
+    }
+    public function expireStale(): void
+    {
+        $now = $this->now(); $cutoff = gmdate('Y-m-d H:i:s',time()-20);
+        $this->run("UPDATE remote_support_sessions SET status='EXPIRED',ended_at=expires_at,end_reason='consent_timeout' WHERE status='WAITING' AND expires_at<=?", [$now]);
+        $stale=$this->run("SELECT id,approved_at,agent_seen_at,viewer_seen_at FROM remote_support_sessions WHERE status IN ('ACCEPTED','CONNECTED') AND ((agent_seen_at IS NOT NULL AND agent_seen_at<?) OR (viewer_seen_at IS NOT NULL AND viewer_seen_at<?) OR (viewer_seen_at IS NULL AND approved_at<?))", [$cutoff,$cutoff,$cutoff])->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($stale as $s) {
+            $seen=array_filter([$s['agent_seen_at'],$s['viewer_seen_at'] ?? $s['approved_at']]);
+            $last=min(array_map(fn($date)=>strtotime($date.' UTC'),$seen));
+            $ended=gmdate('Y-m-d H:i:s',min(time(),$last+20));
+            $this->run("UPDATE remote_support_sessions SET status='ENDED',ended_at=?,end_reason='connection_lost' WHERE id=? AND status IN ('ACCEPTED','CONNECTED')", [$ended,$s['id']]);
         }
-
-        $pin = (string)random_int(100000, 999999);
-        $code = 'REM-' . $pin;
-
-        $stmt = $this->db->prepare("
-            INSERT INTO remote_support_sessions (session_code, ticket_id, staff_id, client_id, status, notes)
-            VALUES (:session_code, NULL, 0, :client_id, 'WAITING', 'Phiên hỗ trợ do người dùng tạo')
-        ");
-        $stmt->execute([
-            'session_code' => $code,
-            'client_id'    => $clientId
-        ]);
-
-        return $this->findByCode($code) ?? ['session_code' => $code, 'status' => 'WAITING'];
+        $this->run("DELETE FROM remote_support_signals WHERE session_id IN (SELECT id FROM remote_support_sessions WHERE status NOT IN ('WAITING','ACCEPTED','CONNECTED'))");
     }
-
-    public function assignStaff(int $sessionId, int $staffId): void
+    public function signal(array $s, string $role, string $type, array $payload): void
     {
-        $stmt = $this->db->prepare("UPDATE remote_support_sessions SET staff_id = :staff_id WHERE id = :id");
-        $stmt->execute(['staff_id' => $staffId, 'id' => $sessionId]);
+        if (!in_array($s['status'],['ACCEPTED','CONNECTED'],true) || !$this->hasGrant($s)) throw new DomainException('Consent is required before signaling.');
+        if (!in_array($type,['OFFER','ANSWER','CANDIDATE'],true) || ($type==='OFFER' && $role!=='STAFF') || ($type==='ANSWER' && $role!=='CLIENT')) throw new DomainException('Invalid signaling direction.');
+        $json = json_encode($payload,JSON_THROW_ON_ERROR);
+        if (strlen($json)>65536) throw new DomainException('Signal is too large.');
+        $count = (int)$this->run('SELECT COUNT(*) FROM remote_support_signals WHERE session_id=?',[$s['id']])->fetchColumn();
+        if ($count >= 512) throw new DomainException('Signal limit exceeded.');
+        $this->run('INSERT INTO remote_support_signals (session_id,sender_type,signal_type,payload,created_at) VALUES (?,?,?,?,?)', [$s['id'],$role,$type,$json,$this->now()]);
     }
-
-    public function updateStatus(int $id, string $status): void
+    public function signals(array $s, string $role, int $after): array
     {
-        $extra = "";
-        if ($status === 'CONNECTED') {
-            $extra = ", started_at = COALESCE(started_at, NOW())";
-        } elseif ($status === 'ENDED' || $status === 'REJECTED') {
-            $extra = ", ended_at = NOW()";
-        }
-        $stmt = $this->db->prepare("UPDATE remote_support_sessions SET status = :status $extra WHERE id = :id");
-        $stmt->execute(['status' => $status, 'id' => $id]);
+        if (!in_array($s['status'],['ACCEPTED','CONNECTED'],true)) return [];
+        $rows = $this->run('SELECT id,signal_type,payload FROM remote_support_signals WHERE session_id=? AND sender_type=? AND id>? ORDER BY id LIMIT 100', [$s['id'],$role==='STAFF'?'CLIENT':'STAFF',max(0,$after)])->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$row) $row['payload']=json_decode($row['payload'],true);
+        return $rows;
     }
-
-    public function updateUltraviewer(int $id, string $uvId, string $uvPass): void
+    public function viewerSeen(array $s): void
     {
-        $stmt = $this->db->prepare("UPDATE remote_support_sessions SET ultraviewer_id = :uv_id, ultraviewer_pass = :uv_pass WHERE id = :id");
-        $stmt->execute(['uv_id' => $uvId, 'uv_pass' => $uvPass, 'id' => $id]);
-    }
-
-    public function addSignal(int $sessionId, string $senderType, string $signalType, string $payload): int
-    {
-        $stmt = $this->db->prepare("
-            INSERT INTO remote_support_signals (session_id, sender_type, signal_type, payload)
-            VALUES (:session_id, :sender_type, :signal_type, :payload)
-        ");
-        $stmt->execute([
-            'session_id'  => $sessionId,
-            'sender_type' => $senderType,
-            'signal_type' => $signalType,
-            'payload'     => $payload
-        ]);
-        $id = (int)$this->db->lastInsertId();
-
-        // Periodically purge old frame signals to keep DB lightweight (1 in 8 chance)
-        if (mt_rand(1, 8) === 1) {
-            try {
-                $this->db->exec("DELETE FROM remote_support_signals WHERE signal_type = 'FRAME' AND created_at < DATE_SUB(NOW(), INTERVAL 1 MINUTE)");
-            } catch (\Throwable $e) {}
-        }
-
-        return $id;
-    }
-
-    public function getSignals(int $sessionId, string $forType, int $afterId = 0): array
-    {
-        // When 'STAFF' queries signals, get signals sent by 'CLIENT'. Vice-versa.
-        $senderType = ($forType === 'STAFF') ? 'CLIENT' : 'STAFF';
-        $stmt = $this->db->prepare("
-            SELECT * FROM remote_support_signals
-            WHERE session_id = :session_id AND sender_type = :sender_type AND id > :after_id
-            ORDER BY id ASC
-        ");
-        $stmt->execute([
-            'session_id'  => $sessionId,
-            'sender_type' => $senderType,
-            'after_id'    => $afterId
-        ]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function getAllRecent(int $limit = 20): array
-    {
-        $stmt = $this->db->prepare("
-            SELECT s.*, 
-                   st.full_name as staff_name,
-                   cl.full_name as client_name, cl.department as client_department,
-                   t.ticket_code, t.title as ticket_title
-            FROM remote_support_sessions s
-            JOIN users st ON s.staff_id = st.id
-            JOIN users cl ON s.client_id = cl.id
-            LEFT JOIN tickets t ON s.ticket_id = t.id
-            ORDER BY s.id DESC LIMIT :lim
-        ");
-        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function addControlEvent(int $sessionId, string $eventType, array $payload): int
-    {
-        $stmt = $this->db->prepare("
-            INSERT INTO remote_support_control_events (session_id, event_type, payload)
-            VALUES (:session_id, :event_type, :payload)
-        ");
-        $stmt->execute([
-            'session_id' => $sessionId,
-            'event_type' => $eventType,
-            'payload'    => json_encode($payload, JSON_UNESCAPED_UNICODE)
-        ]);
-        $id = (int)$this->db->lastInsertId();
-
-        // Periodically purge old events (1 in 15 chance)
-        if (mt_rand(1, 15) === 1) {
-            try {
-                $this->db->exec("DELETE FROM remote_support_control_events WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 SECOND)");
-            } catch (\Throwable $e) {}
-        }
-
-        return $id;
-    }
-
-    public function getPendingControlEvents(int $sessionId, int $afterId = 0): array
-    {
-        $stmt = $this->db->prepare("
-            SELECT id, event_type, payload FROM remote_support_control_events
-            WHERE session_id = :session_id AND id > :after_id
-            ORDER BY id ASC LIMIT 50
-        ");
-        $stmt->execute([
-            'session_id' => $sessionId,
-            'after_id'   => $afterId
-        ]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function getLatestControlEventId(int $sessionId): int
-    {
-        $stmt = $this->db->prepare("
-            SELECT COALESCE(MAX(id), 0) FROM remote_support_control_events
-            WHERE session_id = :session_id
-        ");
-        $stmt->execute(['session_id' => $sessionId]);
-        return (int)$stmt->fetchColumn();
-    }
-
-    public function updateAgentHeartbeat(int $sessionId, ?string $resolution = null): void
-    {
-        $stmt = $this->db->prepare("
-            UPDATE remote_support_sessions 
-            SET agent_online = 1, agent_resolution = COALESCE(:res, agent_resolution), agent_last_seen = NOW()
-            WHERE id = :id
-        ");
-        $stmt->execute(['res' => $resolution, 'id' => $sessionId]);
-    }
-
-    public function getAgentStatus(int $sessionId): array
-    {
-        $stmt = $this->db->prepare("
-            SELECT agent_online, agent_resolution,
-                   (agent_last_seen IS NOT NULL AND agent_last_seen >= DATE_SUB(NOW(), INTERVAL 8 SECOND)) as is_active
-            FROM remote_support_sessions WHERE id = :id
-        ");
-        $stmt->execute(['id' => $sessionId]);
-        $res = $stmt->fetch(PDO::FETCH_ASSOC);
-        return [
-            'online'     => (bool)($res['is_active'] ?? false),
-            'resolution' => $res['agent_resolution'] ?? '1920x1080'
-        ];
-    }
-
-    // =========================================================================
-    // noVNC / TightVNC WEBSOCKIFY INTEGRATION (REQUEST -> ACCEPT -> CONTROL)
-    // =========================================================================
-
-    public function createVncRequest(int $ticketId, int $itId, int $enduserId, string $wsUrl = 'http://127.0.0.1:6080/vnc_lite.html', string $pass = '123456'): int
-    {
-        try { $this->db->exec("ALTER TABLE remote_sessions ADD COLUMN expires_at DATETIME NULL, ADD COLUMN responded_at DATETIME NULL"); } catch (\Throwable $e) {}
-        try { $this->db->exec("ALTER TABLE remote_sessions MODIFY COLUMN status ENUM('pending','accepted','rejected','ended','expired') DEFAULT 'pending'"); } catch (\Throwable $e) {}
-        // Cancel existing pending requests for this ticket
-        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'expired' WHERE ticket_id = :tid AND status = 'pending'");
-        $stmt->execute(['tid' => $ticketId]);
-
-        $stmt = $this->db->prepare("
-            INSERT INTO remote_sessions (ticket_id, it_id, enduser_id, ws_url, session_pass, status, expires_at)
-            VALUES (:ticket_id, :it_id, :enduser_id, :ws_url, :session_pass, 'pending', DATE_ADD(NOW(), INTERVAL 30 SECOND))
-        ");
-        $stmt->execute([
-            'ticket_id'    => $ticketId,
-            'it_id'        => $itId,
-            'enduser_id'   => $enduserId,
-            'ws_url'       => $wsUrl,
-            'session_pass' => $pass
-        ]);
-        return (int)$this->db->lastInsertId();
-    }
-
-    public function getPendingVncRequestForUser(int $userId): ?array
-    {
-        $stmt = $this->db->prepare("
-            SELECT rs.*, GREATEST(0, TIMESTAMPDIFF(SECOND, NOW(), rs.expires_at)) AS seconds_remaining, u.full_name as it_name, t.title as ticket_title, t.ticket_code
-            FROM remote_sessions rs
-            JOIN users u ON rs.it_id = u.id
-            JOIN tickets t ON rs.ticket_id = t.id
-            WHERE rs.enduser_id = :uid AND rs.status = 'pending' AND (rs.expires_at IS NULL OR rs.expires_at > NOW())
-            ORDER BY rs.id DESC LIMIT 1
-        ");
-        $stmt->execute(['uid' => $userId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    }
-
-    public function getPendingVncRequestForIt(int $itId): ?array
-    {
-        $stmt = $this->db->prepare("
-            SELECT rs.*, u.full_name as it_name, eu.full_name as enduser_name, t.title as ticket_title, t.ticket_code
-            FROM remote_sessions rs
-            JOIN users u ON rs.it_id = u.id
-            JOIN users eu ON rs.enduser_id = eu.id
-            JOIN tickets t ON rs.ticket_id = t.id
-            WHERE rs.it_id = :it_id AND rs.status = 'pending' AND rs.created_at >= (NOW() - INTERVAL 15 MINUTE)
-            ORDER BY rs.id DESC LIMIT 1
-        ");
-        $stmt->execute(['it_id' => $itId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            $row['is_test_self'] = true;
-            return $row;
-        }
-        return null;
-    }
-
-    public function expireStaleVncRequests(): void
-    {
-        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'expired' WHERE status = 'pending' AND expires_at IS NOT NULL AND expires_at <= NOW()");
-        $stmt->execute();
-    }
-
-    public function expireVncSessionIfNeeded(int $id): bool
-    {
-        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = 'expired' WHERE id = :id AND status = 'pending' AND expires_at IS NOT NULL AND expires_at <= NOW()");
-        $stmt->execute(['id' => $id]);
-        return $stmt->rowCount() > 0;
-    }
-
-    public function updateVncStatus(int $id, string $status): bool
-    {
-        $stmt = $this->db->prepare("UPDATE remote_sessions SET status = :status, responded_at = IF(:status IN ('accepted','rejected'), NOW(), responded_at) WHERE id = :id");
-        return $stmt->execute(['status' => $status, 'id' => $id]);
-    }
-
-    public function getVncSession(int $id): ?array
-    {
-        $stmt = $this->db->prepare("
-            SELECT rs.*, u.full_name as it_name, eu.full_name as enduser_name, t.title as ticket_title, t.ticket_code
-            FROM remote_sessions rs
-            JOIN users u ON rs.it_id = u.id
-            JOIN users eu ON rs.enduser_id = eu.id
-            JOIN tickets t ON rs.ticket_id = t.id
-            WHERE rs.id = :id
-        ");
-        $stmt->execute(['id' => $id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
-    }
-
-    public function getActiveVncForTicket(int $ticketId): ?array
-    {
-        $stmt = $this->db->prepare("
-            SELECT rs.*, u.full_name as it_name
-            FROM remote_sessions rs
-            JOIN users u ON rs.it_id = u.id
-            WHERE rs.ticket_id = :tid AND rs.status IN ('pending', 'accepted')
-            ORDER BY rs.id DESC LIMIT 1
-        ");
-        $stmt->execute(['tid' => $ticketId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        $this->run('UPDATE remote_support_sessions SET viewer_seen_at=? WHERE id=?', [$this->now(),$s['id']]);
     }
 }

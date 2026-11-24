@@ -13,7 +13,7 @@
     RewriteRule ^(.*)$ public/$1 [L]
 
     # Block direct web access to internal application directories
-    RewriteRule ^(app|database|storage|cron)/ - [F,L]
+    RewriteRule ^(app|database|storage|cron|remote)/ - [F,L]
 
     # If file exists at root, serve directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]

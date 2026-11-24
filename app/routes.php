@@ -278,31 +278,20 @@ $router->post('/projects/api/quick-create', [ProjectController::class, 'ajaxQuic
 $router->post('/projects/api/add-comment', [ProjectController::class, 'ajaxAddComment'], [AuthMiddleware::class]);
 $router->get('/projects/api/eligible-parents', [ProjectController::class, 'ajaxGetEligibleParents'], [AuthMiddleware::class]);
 
-// REMOTE SUPPORT ASSISTANCE (WEBRTC LIVE DESKTOP & INTERNAL REMOTE CONTROL)
+// REMOTE SUPPORT: browser login + CSRF, or per-device bearer credential.
 $router->get('/remote-support', [RemoteSupportController::class, 'index'], [AuthMiddleware::class]);
-$router->post('/remote-support/join', [RemoteSupportController::class, 'joinByPin'], [AuthMiddleware::class]);
-$router->get('/remote-support/request/{ticketId}', [RemoteSupportController::class, 'requestFromTicket'], [AuthMiddleware::class]);
-$router->post('/remote-support/create-quick', [RemoteSupportController::class, 'createQuick'], [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/remote-support/install', [RemoteSupportController::class, 'downloadAgent'], [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/remote-support/request/{ticketId}', [RemoteSupportController::class, 'requestFromTicket'], [StaffMiddleware::class, CsrfMiddleware::class]);
+$router->post('/remote-support/create-quick', [RemoteSupportController::class, 'createQuick'], [StaffMiddleware::class, CsrfMiddleware::class]);
 $router->get('/remote-support/session/{code}', [RemoteSupportController::class, 'session'], [AuthMiddleware::class]);
-$router->post('/remote-support/api/signal', [RemoteSupportController::class, 'apiSignalPost'], [AuthMiddleware::class]);
-$router->get('/remote-support/api/signal/{code}', [RemoteSupportController::class, 'apiSignalGet'], [AuthMiddleware::class]);
-$router->post('/remote-support/api/status/{code}', [RemoteSupportController::class, 'apiUpdateStatus'], [AuthMiddleware::class]);
-$router->post('/remote-support/api/ultraviewer/{code}', [RemoteSupportController::class, 'apiSaveUltraviewer'], [AuthMiddleware::class]);
-$router->get('/remote-support/api/check-pending', [RemoteSupportController::class, 'apiCheckPending'], [AuthMiddleware::class]);
-
-// NATIVE REMOTE CONTROL AGENT APIS
-$router->post('/remote-support/api/control/event', [RemoteSupportController::class, 'apiControlEvent'], [AuthMiddleware::class]);
-$router->get('/remote-support/api/control/poll/{code}', [RemoteSupportController::class, 'apiControlPoll']);
-$router->post('/remote-support/api/control/heartbeat/{code}', [RemoteSupportController::class, 'apiControlHeartbeat']);
-$router->get('/remote-support/api/control/status/{code}', [RemoteSupportController::class, 'apiControlStatus'], [AuthMiddleware::class]);
-$router->get('/remote-support/download-agent/{code}', [RemoteSupportController::class, 'downloadAgent']);
-
-// NOVNC + WEBSOCKIFY + TIGHTVNC INTEGRATION (REQUEST -> ACCEPT -> CONTROL)
-$router->post('/remote-support/vnc/request', [RemoteSupportController::class, 'vncRequest'], [AuthMiddleware::class]);
-$router->get('/remote-support/vnc/check-request', [RemoteSupportController::class, 'vncCheckRequest'], [AuthMiddleware::class]);
-$router->post('/remote-support/vnc/respond', [RemoteSupportController::class, 'vncRespond'], [AuthMiddleware::class]);
-$router->get('/remote-support/vnc/session-status/{id}', [RemoteSupportController::class, 'vncSessionStatus'], [AuthMiddleware::class]);
-$router->post('/remote-support/vnc/end', [RemoteSupportController::class, 'vncEnd'], [AuthMiddleware::class]);
+$router->get('/remote-support/api/viewer/{code}', [RemoteSupportController::class, 'viewerPoll'], [StaffMiddleware::class]);
+$router->post('/remote-support/api/signal', [RemoteSupportController::class, 'viewerSignal'], [StaffMiddleware::class, CsrfMiddleware::class]);
+$router->post('/remote-support/end', [RemoteSupportController::class, 'end'], [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/remote-support/revoke', [RemoteSupportController::class, 'revoke'], [AuthMiddleware::class, CsrfMiddleware::class]);
+$router->post('/remote-support/agent/enroll', [RemoteSupportController::class, 'enroll']);
+$router->get('/remote-support/agent/package', [RemoteSupportController::class, 'package']);
+$router->get('/remote-support/agent/poll', [RemoteSupportController::class, 'agentPoll']);
+$router->post('/remote-support/agent/action', [RemoteSupportController::class, 'agentAction']);
 
 // MOBILE APP & WEBVIEW EMBEDDED INTERFACE
 use App\Controllers\MobileController;

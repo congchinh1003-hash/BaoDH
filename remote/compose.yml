@@ -1,0 +1,34 @@
+services:
+  app:
+    build:
+      context: ..
+    env_file: ../.env
+    environment:
+      REMOTE_PUBLIC_URL: https://${TASKFLOW_DOMAIN:?Set TASKFLOW_DOMAIN}
+      REMOTE_RELAY_URL: wss://${REMOTE_RELAY_DOMAIN:?Set REMOTE_RELAY_DOMAIN}
+      REMOTE_RELAY_SECRET: ${REMOTE_RELAY_SECRET:?Set a random shared secret}
+    expose: ["80"]
+    restart: unless-stopped
+  relay:
+    build: ./relay
+    environment:
+      REMOTE_RELAY_SECRET: ${REMOTE_RELAY_SECRET:?Set a random shared secret}
+      REMOTE_BEHIND_TLS_PROXY: "true"
+      REMOTE_RELAY_HOST: 0.0.0.0
+    expose: ["8081"]
+    restart: unless-stopped
+  proxy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      TASKFLOW_DOMAIN: ${TASKFLOW_DOMAIN:?Set TASKFLOW_DOMAIN}
+      REMOTE_RELAY_DOMAIN: ${REMOTE_RELAY_DOMAIN:?Set REMOTE_RELAY_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app, relay]
+    restart: unless-stopped
+volumes:
+  caddy_data:
+  caddy_config:

@@ -28,3 +28,9 @@ storage/logs/*
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Remote support build/dependency output (the distributable ZIP is versioned)
+remote/agent/bin/
+remote/agent/obj/
+remote/agent/artifacts/
+remote/relay/node_modules/
