@@ -2,6 +2,31 @@
 use App\Core\Language;
 use App\Core\Session;
 
+if (!function_exists('asset_url')) {
+    function asset_url(string $path): string {
+        $path = ltrim($path, '/');
+        $file = dirname(__DIR__) . '/public/' . $path;
+        $version = is_file($file) ? (string)filemtime($file) : '1';
+        return \App\Core\Response::baseUrl() . '/' . $path . '?v=' . $version;
+    }
+}
+
+if (!function_exists('demo_accounts_by_role')) {
+    function demo_accounts_by_role(array $users): array {
+        $accounts = [];
+        foreach ($users as $user) {
+            $roles = array_map('trim', explode(',', strtoupper($user['roles'] ?? 'USER')));
+            foreach (['ADMIN', 'IT_MANAGER', 'IT_STAFF', 'USER'] as $role) {
+                if (in_array($role, $roles, true)) {
+                    $accounts[$role] ??= $user;
+                    break;
+                }
+            }
+        }
+        return $accounts;
+    }
+}
+
 if (!function_exists('__')) {
     function __($key, $default = null) {
         return Language::get($key, $default);

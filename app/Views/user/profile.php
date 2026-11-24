@@ -30,7 +30,7 @@ $phone = $profileUser['phone'] ?? '';
     </nav>
 
     <!-- USER HERO HEADER CARD -->
-    <div class="card border shadow-sm rounded-3 mb-4 bg-white overflow-hidden">
+    <div class="card border shadow-sm rounded-3 mb-4 bg-white overflow-hidden tf-profile-hero">
         <div style="height: 100px; background: linear-gradient(135deg, #0052CC 0%, #2684FF 50%, #00B8D9 100%);"></div>
         <div class="card-body px-4 pb-4 pt-0 position-relative">
             <div class="d-flex flex-wrap align-items-end justify-content-between gap-3" style="margin-top: -50px;">

@@ -133,7 +133,7 @@ $baseUrl = Response::baseUrl();
 <!-- TICKETS TABLE -->
 <div class="card border-0" style="border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.08); overflow:hidden;">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+        <table class="table table-hover align-middle mb-0 tf-ticket-table">
             <thead style="background:#F4F5F7;">
                 <tr>
                     <th style="width:130px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#5E6C84; padding:12px 16px; font-weight:700;">Mã Ticket</th>
@@ -193,12 +193,12 @@ $baseUrl = Response::baseUrl();
                         }
                         ?>
                         <tr style="border-bottom:1px solid #F4F5F7;">
-                            <td style="padding:14px 16px;">
+                            <td data-label="Mã yêu cầu" style="padding:14px 16px;">
                                 <a href="<?= $baseUrl ?>/tickets/<?= $t['id'] ?>" class="ticket-code-pill">
                                     <i class="bi bi-hash"></i><?= htmlspecialchars($t['ticket_code']) ?>
                                 </a>
                             </td>
-                            <td style="padding:14px 16px;">
+                            <td data-label="Nội dung" style="padding:14px 16px;">
                                 <div class="fw-bold text-truncate" style="max-width:320px; color:#172B4D;">
                                     <a href="<?= $baseUrl ?>/tickets/<?= $t['id'] ?>" class="text-decoration-none hover-primary" style="color:#172B4D;">
                                         <?= htmlspecialchars($t['title']) ?>
@@ -210,15 +210,15 @@ $baseUrl = Response::baseUrl();
                                     <i class="bi bi-folder2 me-1"></i><?= htmlspecialchars($t['category_name']) ?>
                                 </div>
                             </td>
-                            <td style="padding:14px 16px;">
+                            <td data-label="Ưu tiên" style="padding:14px 16px;">
                                 <span class="badge-priority priority-<?= $priorityCode ?>">
                                     <i class="bi <?= $priorityIcon ?> me-1"></i><?= htmlspecialchars($t['priority_name']) ?>
                                 </span>
                             </td>
-                            <td style="padding:14px 16px;">
+                            <td data-label="Nhóm IT" style="padding:14px 16px;">
                                 <span class="small fw-semibold" style="color:#5E6C84;"><?= htmlspecialchars($t['group_name'] ?? 'Chưa phân nhóm') ?></span>
                             </td>
-                            <td style="padding:14px 16px;">
+                            <td data-label="Người xử lý" style="padding:14px 16px;">
                                 <?php if (!empty($t['assignee_name'])): ?>
                                     <div class="d-flex align-items-center gap-2">
                                         <div class="user-avatar-circle bg-primary text-white"
@@ -231,12 +231,12 @@ $baseUrl = Response::baseUrl();
                                     <span class="badge bg-light text-muted border" style="border-radius:999px; font-size:0.75rem;">Chưa gán</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="padding:14px 16px;">
+                            <td data-label="Trạng thái" style="padding:14px 16px;">
                                 <span class="badge-status status-<?= strtolower($t['status']) ?>">
                                     <?= htmlspecialchars($t['status_name'] ?? $t['status']) ?>
                                 </span>
                             </td>
-                            <td style="padding:14px 16px;">
+                            <td data-label="Thời hạn SLA" style="padding:14px 16px;">
                                 <?php if ($isCompleted): ?>
                                     <div class="small fw-semibold text-muted font-monospace">
                                         <?= !empty($t['sla_due_at']) ? date('d/m/Y H:i', strtotime($t['sla_due_at'])) : 'N/A' ?>
@@ -279,7 +279,7 @@ $baseUrl = Response::baseUrl();
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-end" style="padding:14px 16px;">
+                            <td data-label="Chi tiết" class="text-end" style="padding:14px 16px;">
                                 <a href="<?= $baseUrl ?>/tickets/<?= $t['id'] ?>" class="btn btn-outline-primary btn-sm fw-semibold px-3" style="border-radius:6px;">
                                     Xem <i class="bi bi-chevron-right ms-1"></i>
                                 </a>

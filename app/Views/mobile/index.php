@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= htmlspecialchars($pageTitle ?? 'TaskFlow') ?></title>
     
     <!-- Native App Meta -->
@@ -15,666 +15,34 @@
     <!-- Modern Soft Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     
-    <!-- Local & CDN QR Scanner -->
-    <script src="<?= $baseUrl ?? '' ?>/public/js/html5-qrcode.min.js"></script>
-    <script>
-        if (typeof Html5Qrcode === 'undefined') {
-            document.write('<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"><\/script>');
-        }
-    </script>
-
-    <style>
-        :root {
-            --app-bg: #f8fafc;
-            --surface: #ffffff;
-            --primary: #2563eb;
-            --primary-soft: #eff6ff;
-            --primary-border: #bfdbfe;
-            --emerald: #10b981;
-            --emerald-soft: #ecfdf5;
-            --emerald-border: #a7f3d0;
-            --amber: #f59e0b;
-            --amber-soft: #fffbeb;
-            --rose: #ef4444;
-            --rose-soft: #fef2f2;
-            --text-main: #0f172a;
-            --text-sub: #475569;
-            --text-muted: #94a3b8;
-            --border-soft: #f1f5f9;
-            --border-card: #e2e8f0;
-            --safe-bottom: env(safe-area-inset-bottom, 16px);
-        }
-
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        html, body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--app-bg);
-            color: var(--text-main);
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', Roboto, sans-serif;
-            font-size: 15px;
-            line-height: 1.45;
-            -webkit-text-size-adjust: 100%;
-            -webkit-font-smoothing: antialiased;
-            user-select: none;
-            -webkit-user-select: none;
-            padding-bottom: calc(72px + var(--safe-bottom));
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* Soft Floating App Bar */
-        .app-header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.7);
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 56px;
-        }
-
-        .app-brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--text-main);
-            letter-spacing: -0.3px;
-        }
-
-        .brand-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.05rem;
-            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Soft Pill Buttons */
-        .pill-btn-qr {
-            background: var(--emerald-soft);
-            color: #047857;
-            border: 1px solid var(--emerald-border);
-            border-radius: 999px;
-            padding: 6px 12px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .pill-btn-qr:active {
-            transform: scale(0.96);
-            background: #d1fae5;
-        }
-
-        .user-avatar-circle {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: var(--primary-soft);
-            color: var(--primary);
-            font-weight: 700;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1.5px solid var(--primary-border);
-            cursor: pointer;
-        }
-
-        /* Main Container */
-        .app-content {
-            display: none;
-            padding: 12px 14px;
-            animation: fadeInSoft 0.18s ease-out forwards;
-        }
-
-        .app-content.active {
-            display: block;
-        }
-
-        @keyframes fadeInSoft {
-            from { opacity: 0; transform: translateY(3px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Hero QR Scanner Banner */
-        .qr-banner-card {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            border-radius: 16px;
-            padding: 14px 16px;
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            box-shadow: 0 3px 12px rgba(5, 150, 105, 0.2);
-            cursor: pointer;
-            transition: transform 0.12s ease;
-        }
-
-        .qr-banner-card:active {
-            transform: scale(0.98);
-        }
-
-        .qr-banner-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .qr-banner-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-        }
-
-        .qr-banner-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            margin-bottom: 1px;
-        }
-
-        .qr-banner-sub {
-            font-size: 0.74rem;
-            opacity: 0.9;
-        }
-
-        .qr-banner-pill {
-            background: #ffffff;
-            color: #047857;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 6px 12px;
-            border-radius: 999px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Soft Segmented Filter */
-        .soft-segmented {
-            display: flex;
-            background: #f1f5f9;
-            border-radius: 12px;
-            padding: 3px;
-            gap: 3px;
-            margin-bottom: 12px;
-        }
-
-        .soft-segmented-btn {
-            flex: 1;
-            border: none;
-            background: transparent;
-            border-radius: 9px;
-            padding: 7px 4px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: var(--text-sub);
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            white-space: nowrap;
-        }
-
-        .soft-segmented-btn.active {
-            background: #ffffff;
-            color: var(--text-main);
-            font-weight: 700;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-        }
-
-        /* Search Input */
-        .soft-search-bar {
-            background: #ffffff;
-            border: 1px solid var(--border-card);
-            border-radius: 12px;
-            height: 42px;
-            padding: 0 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        }
-
-        .soft-search-bar input {
-            border: none;
-            outline: none;
-            background: transparent;
-            font-family: inherit;
-            font-size: 0.88rem;
-            color: var(--text-main);
-            width: 100%;
-        }
-
-        .soft-search-bar input::placeholder {
-            color: var(--text-muted);
-        }
-
-        /* Soft Ticket Item */
-        .soft-ticket-card {
-            background: #ffffff;
-            border: 1px solid var(--border-soft);
-            border-radius: 14px;
-            padding: 13px 14px;
-            margin-bottom: 9px;
-            cursor: pointer;
-            transition: all 0.12s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        }
-
-        .soft-ticket-card:active {
-            transform: scale(0.985);
-            background: #f8fafc;
-        }
-
-        .ticket-row-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-
-        .ticket-code-tag {
-            font-family: monospace;
-            font-weight: 700;
-            font-size: 0.72rem;
-            color: var(--text-sub);
-            background: #f1f5f9;
-            padding: 2px 6px;
-            border-radius: 6px;
-        }
-
-        .ticket-item-title {
-            font-size: 0.92rem;
-            font-weight: 700;
-            color: var(--text-main);
-            line-height: 1.35;
-            margin-bottom: 5px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .ticket-row-bottom {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.74rem;
-            color: var(--text-muted);
-        }
-
-        /* Soft Status Pill */
-        .status-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 8px;
-            border-radius: 999px;
-            font-size: 0.7rem;
-            font-weight: 700;
-        }
-
-        .tag-new { background: #dbeafe; color: #1e40af; }
-        .tag-assigned { background: #e0e7ff; color: #3730a3; }
-        .tag-progress { background: #fef3c7; color: #92400e; }
-        .tag-pending { background: #ffedd5; color: #9a3412; }
-        .tag-resolved { background: #dcfce7; color: #166534; }
-        .tag-closed { background: #f1f5f9; color: #475569; }
-
-        /* Approval Card */
-        .soft-approval-card {
-            background: #ffffff;
-            border: 1px solid var(--border-card);
-            border-radius: 16px;
-            padding: 15px;
-            margin-bottom: 11px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-        }
-
-        .approval-title-text {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-bottom: 6px;
-        }
-
-        .approval-desc-box {
-            font-size: 0.82rem;
-            color: var(--text-sub);
-            background: #f8fafc;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 12px;
-            line-height: 1.4;
-        }
-
-        .approval-actions-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .soft-action-btn {
-            flex: 1;
-            height: 42px;
-            border-radius: 999px;
-            font-size: 0.84rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            cursor: pointer;
-            border: none;
-            transition: transform 0.12s ease;
-        }
-
-        .soft-action-btn:active {
-            transform: scale(0.96);
-        }
-
-        .btn-soft-reject {
-            background: var(--rose-soft);
-            color: var(--rose);
-            border: 1px solid #fee2e2;
-        }
-
-        .btn-soft-approve {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: #ffffff;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
-        }
-
-        /* QR Scanner Camera UI */
-        .camera-viewport {
-            position: relative;
-            background: #000;
-            border-radius: 20px;
-            overflow: hidden;
-            width: 100%;
-            height: 320px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-            margin-bottom: 14px;
-        }
-
-        #qr-reader {
-            width: 100% !important;
-            height: 100% !important;
-            border: none !important;
-        }
-
-        #qr-reader video {
-            object-fit: cover !important;
-            width: 100% !important;
-            height: 100% !important;
-        }
-
-        .camera-reticle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 200px;
-            height: 200px;
-            border: 2px solid rgba(255, 255, 255, 0.35);
-            border-radius: 20px;
-            pointer-events: none;
-            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
-        }
-
-        .camera-reticle::before, .camera-reticle::after {
-            content: '';
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            border-color: #10b981;
-            border-style: solid;
-        }
-
-        .camera-reticle::before {
-            top: -2px;
-            left: -2px;
-            border-width: 3px 0 0 3px;
-            border-top-left-radius: 18px;
-        }
-
-        .camera-reticle::after {
-            bottom: -2px;
-            right: -2px;
-            border-width: 0 3px 3px 0;
-            border-bottom-right-radius: 18px;
-        }
-
-        .camera-laser {
-            position: absolute;
-            left: 10px;
-            right: 10px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #10b981, transparent);
-            box-shadow: 0 0 10px #10b981;
-            animation: laserMove 2s infinite ease-in-out alternate;
-        }
-
-        @keyframes laserMove {
-            0% { top: 12%; opacity: 0.3; }
-            50% { opacity: 1; }
-            100% { top: 88%; opacity: 0.3; }
-        }
-
-        /* Soft Floating Bottom Nav */
-        .soft-bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: calc(62px + var(--safe-bottom));
-            padding-bottom: var(--safe-bottom);
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(226, 232, 240, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            z-index: 1050;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
-        }
-
-        .nav-item-btn {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.7rem;
-            font-weight: 600;
-            height: 100%;
-            cursor: pointer;
-            position: relative;
-            transition: color 0.15s ease;
-        }
-
-        .nav-item-btn i {
-            font-size: 1.35rem;
-            margin-bottom: 2px;
-            transition: transform 0.15s ease;
-        }
-
-        .nav-item-btn.active {
-            color: var(--primary);
-        }
-
-        .nav-item-btn.active i {
-            transform: translateY(-2px);
-        }
-
-        .nav-badge-pill {
-            position: absolute;
-            top: 7px;
-            right: 25%;
-            background: var(--rose);
-            color: #ffffff;
-            font-size: 0.62rem;
-            font-weight: 800;
-            padding: 1px 5px;
-            border-radius: 999px;
-            border: 1.5px solid #ffffff;
-        }
-
-        /* Center QR Scan Nav Pill */
-        .nav-center-qr {
-            color: var(--emerald) !important;
-        }
-
-        .nav-center-qr i {
-            font-size: 1.55rem;
-        }
-
-        /* Floating Action Button (FAB) */
-        .soft-fab {
-            position: fixed;
-            bottom: calc(74px + var(--safe-bottom));
-            right: 16px;
-            width: 52px;
-            height: 52px;
-            border-radius: 26px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.45rem;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-            border: none;
-            cursor: pointer;
-            z-index: 1040;
-            transition: transform 0.12s ease;
-        }
-
-        .soft-fab:active {
-            transform: scale(0.92);
-        }
-
-        /* Soft Bottom Sheet */
-        .modal.bottom-sheet .modal-dialog {
-            position: fixed;
-            bottom: 0;
-            margin: 0;
-            width: 100%;
-            max-width: 100%;
-        }
-
-        .modal.bottom-sheet .modal-content {
-            border-radius: 24px 24px 0 0;
-            border: none;
-            background: var(--surface);
-            max-height: 88vh;
-            overflow-y: auto;
-            padding-bottom: var(--safe-bottom);
-        }
-
-        .sheet-drag-pill {
-            width: 36px;
-            height: 4px;
-            background-color: #cbd5e1;
-            border-radius: 999px;
-            margin: 10px auto 14px auto;
-        }
-
-        .form-control-soft {
-            height: 44px;
-            border-radius: 12px;
-            background: #f8fafc;
-            border: 1px solid var(--border-card);
-            padding: 0 12px;
-            font-size: 0.9rem;
-            color: var(--text-main);
-        }
-
-        .form-control-soft:focus {
-            background: #ffffff;
-            border-color: #93c5fd;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
-        }
-
-        .btn-soft-primary {
-            height: 46px;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: #ffffff;
-            font-size: 0.92rem;
-            font-weight: 700;
-            border: none;
-            box-shadow: 0 3px 12px rgba(37, 99, 235, 0.25);
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: transform 0.12s ease;
-        }
-
-        .btn-soft-primary:active {
-            transform: scale(0.97);
-        }
-    </style>
+    <link href="<?= htmlspecialchars(asset_url('css/mobile-base.css')) ?>" rel="stylesheet">
+    <link href="<?= htmlspecialchars(asset_url('css/taskflow-ui.css')) ?>" rel="stylesheet">
+    <link href="<?= htmlspecialchars(asset_url('css/taskflow-mobile.css')) ?>" rel="stylesheet">
+    <script src="<?= htmlspecialchars(asset_url('js/taskflow-ui.js')) ?>" defer></script>
 </head>
-<body>
+<body class="tf-mobile-app">
 
     <!-- Soft App Bar -->
     <header class="app-header">
-        <div class="app-brand" id="appHeaderTitle">
+        <div class="app-brand" id="appHeaderTitle" aria-live="polite">
             <div class="brand-icon">
                 <i class="bi bi-layers-fill"></i>
             </div>
             <span>TaskFlow</span>
         </div>
         <div class="header-actions">
-            <div class="pill-btn-qr" onclick="switchTab('screen-scanner')">
+            <button type="button" class="soft-fab" aria-label="Tạo yêu cầu hỗ trợ mới" onclick="openCreateTicketModal('INCIDENT')" title="Tạo yêu cầu mới"><i class="bi bi-plus-lg"></i></button>
+            <button type="button" class="pill-btn-qr" onclick="switchTab('screen-scanner')" aria-label="Quét QR thiết bị">
                 <i class="bi bi-qr-code-scan"></i>
                 <span>Quét QR</span>
-            </div>
-            <div class="user-avatar-circle" onclick="switchTab('screen-profile')" title="Cá nhân">
+            </button>
+            <button type="button" class="user-avatar-circle" onclick="switchTab('screen-profile')" title="Cá nhân" aria-label="Mở tài khoản cá nhân">
                 <?= mb_strtoupper(mb_substr($user['full_name'] ?? 'U', 0, 1)) ?>
-            </div>
+            </button>
         </div>
     </header>
 
@@ -682,6 +50,16 @@
     <!-- SCREEN 1: YÊU CẦU & HUB CHÍNH                                             -->
     <!-- ========================================================================= -->
     <main id="screen-tickets" class="app-content active">
+        <section class="tf-mobile-welcome" aria-label="Tổng quan công việc">
+            <p class="tf-eyebrow">Xin chào, <?= htmlspecialchars($user['full_name'] ?? 'bạn') ?></p>
+            <h1>Công việc trong tầm tay.</h1>
+            <p>Theo dõi yêu cầu, xử lý công việc và kết nối với đội IT.</p>
+            <div class="tf-mobile-metrics">
+                <button type="button" onclick="switchTab('screen-tickets','OPEN')"><strong><?= (int)($stats['open_count'] ?? 0) ?></strong><span>Đang mở</span></button>
+                <button type="button" onclick="switchTab('screen-tickets','PENDING_APPROVAL')"><strong><?= (int)($stats['pending_approval_count'] ?? 0) ?></strong><span>Chờ phê duyệt</span></button>
+                <button type="button" onclick="switchTab('screen-tickets','CLOSED')"><strong><?= (int)($stats['closed_count'] ?? 0) ?></strong><span>Hoàn tất</span></button>
+            </div>
+        </section>
         <!-- Prominent QR Scanner Hero Banner -->
         <div class="qr-banner-card" onclick="switchTab('screen-scanner')">
             <div class="qr-banner-left">
@@ -689,8 +67,8 @@
                     <i class="bi bi-qr-code-scan"></i>
                 </div>
                 <div>
-                    <div class="qr-banner-title">Quét QR Thiết Bị</div>
-                    <div class="qr-banner-sub">Xem máy & báo sự cố 1 chạm</div>
+                    <div class="qr-banner-title">Thiết bị cần hỗ trợ?</div>
+                    <div class="qr-banner-sub">Quét mã để xem và báo sự cố</div>
                 </div>
             </div>
             <div class="qr-banner-pill">
@@ -698,16 +76,17 @@
             </div>
         </div>
 
+        <div class="tf-mobile-section"><div><h2>Yêu cầu hỗ trợ</h2><p>Thông tin mới nhất từ không gian làm việc</p></div><button type="button" class="tf-mobile-refresh" onclick="loadTickets()" aria-label="Làm mới danh sách yêu cầu"><i class="bi bi-arrow-clockwise"></i></button></div>
         <!-- Search Input -->
         <div class="soft-search-bar">
             <i class="bi bi-search text-muted"></i>
-            <input type="text" id="ticketSearchInput" placeholder="Tìm theo mã vé hoặc tiêu đề..." oninput="debounceTicketSearch()">
+            <input type="search" id="ticketSearchInput" placeholder="Tìm mã hoặc nội dung yêu cầu..." aria-label="Tìm yêu cầu hỗ trợ" oninput="debounceTicketSearch()">
         </div>
 
         <!-- Soft Segmented Control -->
         <div class="soft-segmented">
             <button class="soft-segmented-btn active" data-status="ALL" onclick="filterSegment(this, 'ALL')">Tất Cả</button>
-            <button class="soft-segmented-btn" data-status="OPEN" onclick="filterSegment(this, 'OPEN')">Đang Xử Lý</button>
+            <button class="soft-segmented-btn" data-status="OPEN" onclick="filterSegment(this, 'OPEN')">Đang mở</button>
             <button class="soft-segmented-btn" data-status="PENDING_APPROVAL" onclick="filterSegment(this, 'PENDING_APPROVAL')">Chờ Duyệt</button>
             <button class="soft-segmented-btn" data-status="CLOSED" onclick="filterSegment(this, 'CLOSED')">Đã Đóng</button>
         </div>
@@ -759,6 +138,7 @@
                 <div class="camera-laser"></div>
             </div>
         </div>
+        <div id="tfScannerStatus" class="tf-scanner-status" role="status" hidden></div>
 
         <!-- Manual Input / Gallery Options -->
         <div class="d-flex gap-2 mb-2">
@@ -818,9 +198,6 @@
     </main>
 
     <!-- Floating Action Button for Instant Creation -->
-    <button class="soft-fab" onclick="openCreateTicketModal('INCIDENT')" title="Tạo yêu cầu mới">
-        <i class="bi bi-plus-lg"></i>
-    </button>
 
     <!-- ========================================================================= -->
     <!-- BOTTOM SHEET 1: FORM GỬI YÊU CẦU MỚI                                      -->
@@ -969,26 +346,26 @@
     </div>
 
     <!-- Soft Bottom Navigation Bar -->
-    <nav class="soft-bottom-nav">
-        <div class="nav-item-btn active" onclick="switchTab('screen-tickets')" id="tab-tickets">
+    <nav class="soft-bottom-nav" aria-label="Điều hướng mobile">
+        <button type="button" class="nav-item-btn active" onclick="switchTab('screen-tickets')" id="tab-tickets">
             <i class="bi bi-ticket-detailed-fill"></i>
             <span>Yêu cầu</span>
-        </div>
-        <div class="nav-item-btn" onclick="switchTab('screen-approvals')" id="tab-approvals">
+        </button>
+        <button type="button" class="nav-item-btn" onclick="switchTab('screen-approvals')" id="tab-approvals">
             <i class="bi bi-patch-check-fill"></i>
             <span>Phê duyệt</span>
             <?php $pendingCount = count($pendingApprovals ?? []); if ($pendingCount > 0): ?>
                 <span class="nav-badge-pill" id="navApprovalBadge"><?= $pendingCount ?></span>
             <?php endif; ?>
-        </div>
-        <div class="nav-item-btn nav-center-qr" onclick="switchTab('screen-scanner')" id="tab-scanner">
+        </button>
+        <button type="button" class="nav-item-btn nav-center-qr" onclick="switchTab('screen-scanner')" id="tab-scanner">
             <i class="bi bi-qr-code-scan"></i>
             <span>Quét QR</span>
-        </div>
-        <div class="nav-item-btn" onclick="switchTab('screen-profile')" id="tab-profile">
+        </button>
+        <button type="button" class="nav-item-btn" onclick="switchTab('screen-profile')" id="tab-profile">
             <i class="bi bi-person-circle"></i>
             <span>Cá nhân</span>
-        </div>
+        </button>
     </nav>
 
     <!-- Bootstrap Bundle -->
@@ -998,6 +375,9 @@
         const BASE_URL = '<?= $baseUrl ?? '' ?>';
         const CSRF_TOKEN = '<?= \App\Core\Session::csrfToken() ?>';
 
+        const INITIAL_TICKETS = <?= json_encode($recentTickets ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+        let cachedTickets = [], visibleTickets = 12, ticketRequest = null, ticketRequestId = 0;
+        let qrLibraryPromise = null, scannerStarting = false, scannerGeneration = 0;
         let currentScreen = 'screen-tickets';
         let currentTicketFilter = 'ALL';
         let searchTimer = null;
@@ -1008,7 +388,8 @@
         let lastScannedAsset = null;
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadTickets();
+            renderTickets(INITIAL_TICKETS);
+            loadTickets(false);
 
             // When asset popup is closed, resume scanner if still on scanner tab
             const assetModal = document.getElementById('modalAssetDetail');
@@ -1049,11 +430,12 @@
             };
             const activeTab = document.getElementById(tabMap[screenId]);
             if (activeTab) activeTab.classList.add('active');
+            document.querySelectorAll('.nav-item-btn').forEach(tab => tab.setAttribute('aria-current', tab === activeTab ? 'page' : 'false'));
 
             const titleMap = {
                 'screen-tickets': '<div class="brand-icon"><i class="bi bi-layers-fill"></i></div><span>TaskFlow</span>',
                 'screen-approvals': '<div class="brand-icon" style="background:#f59e0b;"><i class="bi bi-patch-check-fill"></i></div><span>Phê Duyệt</span>',
-                'screen-scanner': '<div class="brand-icon" style="background:#10b981;"><i class="bi bi-qr-code-scan"></i></div><span>Quét Mã Thiết Bị</span>',
+                'screen-scanner': '<div class="brand-icon" style="background:#10b981;"><i class="bi bi-qr-code-scan"></i></div><span>Quét QR</span>',
                 'screen-profile': '<div class="brand-icon" style="background:#64748b;"><i class="bi bi-person-circle"></i></div><span>Tài Khoản</span>'
             };
             const appHeaderTitle = document.getElementById('appHeaderTitle');
@@ -1094,59 +476,54 @@
         // =========================================================================
         // TICKETS MANAGEMENT
         // =========================================================================
-        function loadTickets() {
+        function renderTickets(tickets) {
+            cachedTickets = Array.isArray(tickets) ? tickets : [];
+            visibleTickets = 12;
+            renderTicketPage();
+        }
+
+        function renderTicketPage() {
             const container = document.getElementById('ticketsContainer');
-            const search = document.getElementById('ticketSearchInput') ? document.getElementById('ticketSearchInput').value.trim() : '';
+            if (!cachedTickets.length) {
+                container.innerHTML = `<div class="bg-white border rounded-4 p-4 text-center text-muted my-2"><i class="bi bi-inbox fs-2 mb-2 d-block"></i><div class="fw-bold text-dark">Chưa có yêu cầu phù hợp</div><div class="small mt-1">Thử bộ lọc khác hoặc bấm (+) để gửi yêu cầu mới.</div></div>`;
+                return;
+            }
+            container.innerHTML = cachedTickets.slice(0, visibleTickets).map(tk => {
+                const id = Number(tk.id);
+                if (!Number.isInteger(id) || id < 1) return '';
+                const color = /^#[0-9a-f]{3,8}$/i.test(tk.priority_color || '') ? tk.priority_color : '#1769dc';
+                return `<div class="soft-ticket-card" onclick="openTicketDetail(${id})">
+                    <div class="ticket-row-top"><div class="d-flex align-items-center gap-2">
+                        <span class="ticket-code-tag">#${escapeHtml(tk.ticket_code)}</span>
+                        <span class="tf-ticket-priority" style="color:${color}">● ${escapeHtml(tk.priority_name || 'Bình thường')}</span>
+                    </div>${getStatusBadgeHtml(tk.status)}</div>
+                    <div class="ticket-item-title">${escapeHtml(tk.title)}</div>
+                    <div class="ticket-row-bottom"><span><i class="bi bi-tag me-1"></i>${escapeHtml(tk.category_name || 'Sự cố IT')}</span><span><i class="bi bi-clock me-1"></i>${formatDate(tk.created_at)}</span></div>
+                </div>`;
+            }).join('') + `<div class="tf-ticket-list-footer"><p>Đang hiển thị ${Math.min(visibleTickets,cachedTickets.length)} / ${cachedTickets.length} yêu cầu</p>${visibleTickets < cachedTickets.length ? '<button type="button" onclick="showMoreTickets()">Xem thêm yêu cầu <i class="bi bi-chevron-down ms-1"></i></button>' : ''}</div>`;
+        }
 
-            container.innerHTML = `
-                <div class="text-center py-5 text-muted">
-                    <div class="spinner-border spinner-border-sm text-primary"></div>
-                    <div class="small mt-2">Đang tải danh sách...</div>
-                </div>
-            `;
+        function showMoreTickets() {
+            visibleTickets += 12;
+            renderTicketPage();
+        }
 
-            fetch(`${BASE_URL}/mobile/api/tickets?status=${encodeURIComponent(currentTicketFilter)}&search=${encodeURIComponent(search)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.success || !data.tickets || data.tickets.length === 0) {
-                        container.innerHTML = `
-                            <div class="bg-white border rounded-4 p-4 text-center text-muted my-2 shadow-sm">
-                                <i class="bi bi-inbox fs-2 mb-2 text-secondary d-block"></i>
-                                <div class="fw-bold text-dark small">Không tìm thấy yêu cầu nào</div>
-                                <div class="text-muted" style="font-size:0.75rem;">Bấm nút (+) để gửi yêu cầu hỗ trợ mới.</div>
-                            </div>
-                        `;
-                        return;
-                    }
-
-                    let html = '';
-                    data.tickets.forEach(tk => {
-                        const statusBadge = getStatusBadgeHtml(tk.status);
-                        const priorityColor = tk.priority_color || '#3b82f6';
-                        html += `
-                            <div class="soft-ticket-card" onclick="openTicketDetail(${tk.id})">
-                                <div class="ticket-row-top">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="ticket-code-tag">#${tk.ticket_code}</span>
-                                        <span style="font-size:0.72rem; font-weight:700; color:${priorityColor}">
-                                            ● ${tk.priority_name || 'Bình thường'}
-                                        </span>
-                                    </div>
-                                    ${statusBadge}
-                                </div>
-                                <div class="ticket-item-title">${escapeHtml(tk.title)}</div>
-                                <div class="ticket-row-bottom">
-                                    <span><i class="bi bi-tag-fill me-1"></i>${escapeHtml(tk.category_name || 'Sự cố IT')}</span>
-                                    <span><i class="bi bi-clock me-1"></i>${formatDate(tk.created_at)}</span>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    container.innerHTML = html;
+        function loadTickets(showLoading = true) {
+            const container = document.getElementById('ticketsContainer');
+            const search = document.getElementById('ticketSearchInput')?.value.trim() || '';
+            ticketRequest?.abort();
+            ticketRequest = new AbortController();
+            const requestId = ++ticketRequestId;
+            container.setAttribute('aria-busy', 'true');
+            if (showLoading) container.classList.add('tf-list-loading');
+            fetch(`${BASE_URL}/mobile/api/tickets?status=${encodeURIComponent(currentTicketFilter)}&search=${encodeURIComponent(search)}`, {signal: ticketRequest.signal})
+                .then(res => { if (!res.ok) throw new Error('Không tải được danh sách yêu cầu.'); return res.json(); })
+                .then(data => { if (requestId !== ticketRequestId) return; if (!data.success) throw new Error(data.message || 'Không tải được danh sách yêu cầu.'); renderTickets(data.tickets); })
+                .catch(error => {
+                    if (error.name === 'AbortError' || requestId !== ticketRequestId) return;
+                    container.innerHTML = `<div class="alert alert-light border p-4 text-center"><i class="bi bi-wifi-off fs-3 text-secondary"></i><p class="small mt-2">${escapeHtml(error.message)}</p><button type="button" class="btn btn-primary btn-sm" onclick="loadTickets()">Thử lại</button></div>`;
                 })
-                .catch(err => {
-                    container.innerHTML = `<div class="alert alert-danger small m-2">Lỗi tải dữ liệu: ${err.message}</div>`;
-                });
+                .finally(() => { if (requestId === ticketRequestId) { container.classList.remove('tf-list-loading'); container.setAttribute('aria-busy', 'false'); } });
         }
 
         function openTicketDetail(ticketId) {
@@ -1275,9 +652,7 @@
                             <div class="fw-bold small text-dark mb-1 d-flex align-items-center gap-1">
                                 <i class="bi bi-file-earmark-text text-primary"></i> Nội dung mô tả sự cố:
                             </div>
-                            <div class="p-3 bg-light rounded-3 text-dark small" style="white-space: pre-wrap; line-height: 1.5; border: 1px solid #f1f5f9;">
-                                ${escapeHtml(tk.description || 'Không có mô tả chi tiết.')}
-                            </div>
+                            <div class="p-3 bg-light rounded-3 text-dark small" style="white-space: pre-wrap; line-height: 1.7; border: 1px solid #f1f5f9;">${escapeHtml(tk.description || 'Không có mô tả chi tiết.')}</div>
                         </div>
 
                         ${checklistHtml}
@@ -1467,49 +842,64 @@
         // =========================================================================
         // QR CODE SCANNER (CAMERA & IMAGE PARSER)
         // =========================================================================
-        function startScanner() {
-            if (isScannerRunning) return;
-            isScanLocked = false;
-
-            if (typeof Html5Qrcode === 'undefined') {
-                alert('Thư viện quét mã đang tải, vui lòng thử lại sau vài giây.');
-                return;
+        function ensureQrLibrary() {
+            if (typeof Html5Qrcode !== 'undefined') return Promise.resolve();
+            if (!qrLibraryPromise) {
+                qrLibraryPromise = new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = <?= json_encode(asset_url('js/html5-qrcode.min.js'), JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+                    script.onload = () => typeof Html5Qrcode !== 'undefined' ? resolve() : reject(new Error('QR library unavailable'));
+                    script.onerror = () => reject(new Error('QR library unavailable'));
+                    document.head.appendChild(script);
+                }).catch(error => { qrLibraryPromise = null; throw error; });
             }
+            return qrLibraryPromise;
+        }
 
+        async function startScanner() {
+            if (isScannerRunning || scannerStarting || currentScreen !== 'screen-scanner') return;
+            scannerStarting = true;
+            const generation = ++scannerGeneration;
+            const status = document.getElementById('tfScannerStatus');
+            status.hidden = false;
+            status.textContent = 'Đang chuẩn bị camera…';
+            isScanLocked = false;
             try {
-                html5QrCode = new Html5Qrcode("qr-reader");
-                const config = { fps: 15, qrbox: { width: 200, height: 200 } };
-
-                html5QrCode.start(
-                    { facingMode: currentCameraFacing },
-                    config,
-                    onQrCodeScanned,
-                    onQrScanError
-                ).then(() => {
-                    isScannerRunning = true;
-                    isScanLocked = false;
-                }).catch(err => {
-                    console.warn("Camera start error:", err);
-                });
-            } catch (e) {
-                console.error(e);
+                await ensureQrLibrary();
+                if (generation !== scannerGeneration || currentScreen !== 'screen-scanner') return;
+                html5QrCode ||= new Html5Qrcode('qr-reader');
+                await html5QrCode.start({facingMode: currentCameraFacing}, {fps: 12, qrbox: {width: 200,height: 200}}, onQrCodeScanned, onQrScanError);
+                isScannerRunning = true;
+                if (generation !== scannerGeneration || currentScreen !== 'screen-scanner') {
+                    await html5QrCode.stop(); isScannerRunning = false; return;
+                }
+                status.hidden = true;
+            } catch (error) {
+                if (generation === scannerGeneration && currentScreen === 'screen-scanner') {
+                    status.innerHTML = 'Chưa mở được camera. Bạn có thể nhập mã thiết bị bên dưới.<button type="button" onclick="startScanner()">Thử lại</button>';
+                }
+            } finally {
+                scannerStarting = false;
+                if (generation !== scannerGeneration && currentScreen === 'screen-scanner' && !isScannerRunning) startScanner();
             }
         }
 
         function stopScanner() {
+            scannerGeneration++;
             isScanLocked = false;
             if (html5QrCode && isScannerRunning) {
-                html5QrCode.stop().then(() => {
+                return html5QrCode.stop().then(() => {
                     isScannerRunning = false;
-                }).catch(err => console.warn(err));
+                    if (currentScreen === 'screen-scanner') startScanner();
+                }).catch(error => console.warn(error));
             }
+            return Promise.resolve();
         }
 
-        function switchCamera() {
-            isScanLocked = false;
-            stopScanner();
-            currentCameraFacing = currentCameraFacing === "environment" ? "user" : "environment";
-            setTimeout(startScanner, 250);
+        async function switchCamera() {
+            currentCameraFacing = currentCameraFacing === 'environment' ? 'user' : 'environment';
+            await stopScanner();
+            if (currentScreen === 'screen-scanner') startScanner();
         }
 
         function onQrCodeScanned(decodedText, decodedResult) {
@@ -1548,14 +938,11 @@
             // silent parse
         }
 
-        function scanQRFromImage(event) {
+        async function scanQRFromImage(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            if (typeof Html5Qrcode === 'undefined') {
-                alert('Thư viện quét chưa sẵn sàng.');
-                return;
-            }
+            try { await ensureQrLibrary(); } catch { alert('Không tải được công cụ quét QR. Vui lòng thử lại.'); return; }
 
             const qr = new Html5Qrcode("qr-reader");
             qr.scanFile(file, true)
@@ -1711,9 +1098,13 @@
                 'IN_PROGRESS': '<span class="status-tag tag-progress">● Đang xử lý</span>',
                 'PENDING_APPROVAL': '<span class="status-tag tag-pending">● Chờ duyệt</span>',
                 'RESOLVED': '<span class="status-tag tag-resolved">● Đã xong</span>',
-                'CLOSED': '<span class="status-tag tag-closed">● Đã đóng</span>'
+                'CLOSED': '<span class="status-tag tag-closed">● Đã đóng</span>',
+                'WAITING_USER': '<span class="status-tag tag-pending">● Chờ phản hồi</span>',
+                'WAITING_VENDOR': '<span class="status-tag tag-pending">● Chờ đối tác</span>',
+                'CANCELLED': '<span class="status-tag tag-closed">● Đã hủy</span>',
+                'DUPLICATE': '<span class="status-tag tag-closed">● Trùng yêu cầu</span>'
             };
-            return map[status] || `<span class="status-tag tag-closed">${status}</span>`;
+            return map[status] || `<span class="status-tag tag-closed">${escapeHtml(status)}</span>`;
         }
 
         function formatDate(dStr) {

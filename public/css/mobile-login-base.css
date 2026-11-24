@@ -1,0 +1,384 @@
+:root {
+            --primary: #0C66E4;
+            --primary-hover: #0052CC;
+            --primary-soft: #EBF3FF;
+            --text-dark: #0F172A;
+            --text-sub: #64748B;
+            --border-soft: #E2E8F0;
+            --card-bg: #FFFFFF;
+            --body-bg: #F8FAFC;
+            --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--body-bg);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        .mobile-login-wrapper {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: max(16px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+            position: relative;
+        }
+
+        /* Ambient Header Glow */
+        .ambient-glow {
+            position: absolute;
+            top: -120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 380px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(12, 102, 228, 0.16) 0%, rgba(99, 102, 241, 0.08) 50%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(50px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* App Branding */
+        .brand-section {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding-top: 18px;
+            padding-bottom: 14px;
+        }
+
+        .brand-icon-box {
+            width: 68px;
+            height: 68px;
+            margin: 0 auto 12px;
+            background: linear-gradient(135deg, #0C66E4 0%, #3B82F6 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 32px;
+            box-shadow: 0 10px 24px rgba(12, 102, 228, 0.28), 0 2px 6px rgba(12, 102, 228, 0.15);
+            transform: rotate(-1deg);
+        }
+
+        .app-name {
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-dark);
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .app-tag {
+            font-size: 0.65rem;
+            background: #EBF3FF;
+            color: var(--primary);
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            border: 1px solid #D0E2FF;
+        }
+
+        .app-subheading {
+            font-size: 0.82rem;
+            color: var(--text-sub);
+            margin-bottom: 0;
+        }
+
+        /* Mobile Form Card */
+        .mobile-login-card {
+            position: relative;
+            z-index: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border-soft);
+            border-radius: 22px;
+            padding: 22px 20px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
+            margin: 8px 0;
+        }
+
+        .login-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .login-card-desc {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            margin-bottom: 16px;
+        }
+
+        /* Input Controls */
+        .input-group-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mobile-input-wrap {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        .mobile-input-wrap .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94A3B8;
+            font-size: 1.05rem;
+            pointer-events: none;
+            transition: color 0.15s ease;
+        }
+
+        .mobile-input {
+            width: 100%;
+            height: 48px;
+            padding: 10px 14px 10px 42px;
+            background: #F8FAFC;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 14px;
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-input:focus {
+            background: #FFFFFF;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3.5px rgba(12, 102, 228, 0.12);
+        }
+
+        .mobile-input:focus + .input-icon,
+        .mobile-input-wrap:focus-within .input-icon {
+            color: var(--primary);
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94A3B8;
+            padding: 6px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .toggle-password-btn:active {
+            color: var(--primary);
+        }
+
+        /* Remember & Pass Helper */
+        .form-row-extra {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 18px;
+            margin-top: 4px;
+        }
+
+        .pass-chip {
+            background: #F1F5F9;
+            color: #475569;
+            font-size: 0.74rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #E2E8F0;
+            text-decoration: none;
+        }
+
+        .pass-chip:active {
+            background: #E2E8F0;
+        }
+
+        /* Primary Submit Button */
+        .btn-mobile-login {
+            width: 100%;
+            height: 48px;
+            background: linear-gradient(135deg, #0C66E4 0%, #2563EB 100%);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 999px;
+            font-size: 0.94rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(12, 102, 228, 0.28);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-mobile-login:active {
+            transform: scale(0.97);
+            box-shadow: 0 2px 6px rgba(12, 102, 228, 0.2);
+        }
+
+        /* Quick Account Chips */
+        .quick-accounts-sec {
+            position: relative;
+            z-index: 1;
+            margin-top: 8px;
+            margin-bottom: 12px;
+        }
+
+        .quick-sec-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748B;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quick-chips-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .quick-user-chip {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+        }
+
+        .quick-user-chip:active {
+            transform: scale(0.96);
+            background: #F1F5F9;
+        }
+
+        .chip-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .chip-admin { background: #FEF3C7; color: #D97706; }
+        .chip-manager { background: #E0E7FF; color: #4338CA; }
+        .chip-agent { background: #DCFCE7; color: #15803D; }
+        .chip-user { background: #F1F5F9; color: #475569; }
+
+        .chip-info {
+            overflow: hidden;
+        }
+
+        .chip-role-name {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chip-username {
+            font-size: 0.7rem;
+            color: #64748B;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.2;
+        }
+
+        /* Footer */
+        .mobile-footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding-top: 10px;
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            color: #64748B;
+            margin-bottom: 8px;
+        }
+
+        .desktop-link {
+            font-size: 0.78rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .desktop-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Toast notification when quick role chosen */
+        .quick-fill-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #1E293B;
+            color: #FFFFFF;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .quick-fill-toast.show {
+            transform: translateX(-50%) translateY(0);
+        }

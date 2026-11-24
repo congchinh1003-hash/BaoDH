@@ -35,3 +35,4 @@ remote/agent/obj/
 remote/agent/artifacts/
 remote/relay/node_modules/
 remote/test-artifacts/
+tests/ui-artifacts/

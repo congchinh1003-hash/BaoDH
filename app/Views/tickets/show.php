@@ -681,7 +681,7 @@ $canManageTicket = $isStaffOrManager || Auth::isAdmin();
                                                         $cSizeKb = round(((float)($cAtt['file_size'] ?? 0)) / 1024, 1);
                                                         $cExt = strtolower(pathinfo($cFileName, PATHINFO_EXTENSION));
                                                         ?>
-                                                        <div class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-2 border bg-white small shadow-xs" style="border-color:#DFE1E6 !important;">
+                                                        <div class="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-2 border bg-white small shadow-xs tf-attachment-chip" style="border-color:#DFE1E6 !important;">
                                                             <i class="bi bi-paperclip text-primary"></i>
                                                             <span class="text-truncate fw-medium text-dark" style="max-width:200px;" title="<?= htmlspecialchars($cFileName) ?>"><?= htmlspecialchars($cFileName) ?></span>
                                                             <span class="text-muted" style="font-size:0.7rem;">(<?= $cSizeKb ?> KB)</span>

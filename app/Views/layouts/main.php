@@ -57,17 +57,24 @@ if (isset($project) && !empty($project['id'])) {
     
     <!-- Custom Enterprise Theme (Jira Style) -->
     <link href="<?= $baseUrl ?>/css/style.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="<?= htmlspecialchars(asset_url('css/taskflow-ui.css')) ?>" rel="stylesheet">
+    <script src="<?= htmlspecialchars(asset_url('js/taskflow-ui.js')) ?>" defer></script>
     
     <script>
         window.APP_BASE_URL = '<?= $baseUrl ?>';
     </script>
 </head>
-<body>
+<body class="tf-workspace">
+<a href="#tf-main-content" class="tf-skip-link">Chuyển đến nội dung</a>
 
 <div class="app-container">
     <!-- TASKFLOW AUTHENTIC TOP NAVIGATION BAR -->
     <header class="jira-topbar">
         <div class="d-flex align-items-center gap-2">
+            <button class="tf-nav-toggle" id="tf-nav-toggle" type="button" aria-label="Mở menu điều hướng" aria-controls="tf-primary-navigation" aria-expanded="false"><i class="bi bi-list fs-5"></i></button>
             <!-- App Switcher / Waffle Icon -->
             <button class="tf-waffle-btn" title="Ứng dụng & Dịch vụ" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-grid-3x3-gap-fill"></i>
@@ -241,7 +248,7 @@ if (isset($project) && !empty($project['id'])) {
             <div class="position-relative d-none d-md-block">
                 <i class="bi bi-search position-absolute text-muted" style="left: 10px; top: 8px; font-size: 13px;"></i>
                 <form action="<?= $baseUrl ?>/tickets" method="GET" class="m-0">
-                    <input type="text" name="search" class="jira-search-input" placeholder="Tìm kiếm trong Jira..." value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
+                    <input type="search" name="search" class="jira-search-input" placeholder="Tìm yêu cầu hỗ trợ..." aria-label="Tìm yêu cầu hỗ trợ" value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                 </form>
             </div>
 
@@ -294,9 +301,9 @@ if (isset($project) && !empty($project['id'])) {
 
             <!-- User Profile Avatar -->
             <div class="dropdown ms-1">
-                <div class="jira-avatar-circle" data-bs-toggle="dropdown" aria-expanded="false" style="background: linear-gradient(135deg, #0052CC, #2684FF);">
+                <button type="button" class="jira-avatar-circle" data-bs-toggle="dropdown" aria-label="Mở tài khoản cá nhân" aria-expanded="false" style="background: linear-gradient(135deg, #0052CC, #2684FF);">
                     <?= mb_strtoupper(mb_substr($user['full_name'] ?? 'U', 0, 1, 'UTF-8'), 'UTF-8') ?>
-                </div>
+                </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 p-2" style="min-width: 220px;">
                     <li><h6 class="dropdown-header pb-1"><?= htmlspecialchars($user['full_name'] ?? '') ?></h6></li>
                     <li><span class="dropdown-item-text text-muted small pt-0"><?= htmlspecialchars($user['email'] ?? '') ?></span></li>
@@ -317,7 +324,8 @@ if (isset($project) && !empty($project['id'])) {
         <!-- CONTEXT-AWARE JIRA SIDEBAR -->
         <?php if (!empty($project) && !empty($project['id'])): ?>
             <!-- 1. JIRA PROJECT SIDEBAR (Active when viewing a Project) -->
-            <aside class="jira-project-sidebar">
+            <aside class="jira-project-sidebar" id="tf-primary-navigation" aria-label="Điều hướng dự án">
+                <div class="tf-drawer-heading"><span>Không gian làm việc</span><button type="button" data-close-navigation aria-label="Đóng menu"><i class="bi bi-x-lg"></i></button></div>
                 <!-- Project Identity Header -->
                 <div class="jira-project-header border-bottom">
                     <div class="jira-project-avatar" style="background: <?= htmlspecialchars($project['avatar_bg'] ?? '#6554C0') ?>;">
@@ -331,6 +339,7 @@ if (isset($project) && !empty($project['id'])) {
 
                 <!-- Navigation Sections -->
                 <div class="jira-sidebar-nav">
+                    <a href="<?= $baseUrl ?>/dashboard" class="jira-sidebar-item"><i class="bi bi-arrow-left"></i> Tổng quan không gian</a>
                     <!-- PLANNING -->
                     <div class="jira-sidebar-section">PLANNING</div>
                     <a href="<?= $baseUrl ?>/projects/<?= $project['id'] ?>/board#roadmap" class="jira-sidebar-item">
@@ -367,8 +376,11 @@ if (isset($project) && !empty($project['id'])) {
 
         <?php else: ?>
             <!-- 2. GENERAL SYSTEM SIDEBAR (When viewing general ITSM pages) -->
-            <aside class="app-sidebar" style="width: 220px;">
+            <aside class="app-sidebar" id="tf-primary-navigation" aria-label="Điều hướng chính" style="width: 220px;">
+                <div class="tf-drawer-heading"><span>Không gian làm việc</span><button type="button" data-close-navigation aria-label="Đóng menu"><i class="bi bi-x-lg"></i></button></div>
+                <div class="tf-sidebar-heading"><strong>Không gian làm việc</strong><span>Yêu cầu, dự án và vận hành IT</span></div>
                 <div class="sidebar-nav p-2">
+                    <a href="<?= $baseUrl ?>/dashboard" class="nav-link <?= str_contains($currentPath,'/dashboard') ? 'active' : '' ?>"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
                     <?php if (Auth::can('menu.projects')): ?>
                         <div class="nav-section-title">DỰ ÁN AGILE</div>
                         <a href="<?= $baseUrl ?>/projects" class="nav-link <?= str_contains($currentPath, '/projects') ? 'active' : '' ?>">
@@ -428,19 +440,24 @@ if (isset($project) && !empty($project['id'])) {
 
                     <?php if (Auth::can('menu.admin')): ?>
                         <div class="nav-section-title mt-2">HỆ THỐNG</div>
+                        <a href="<?= $baseUrl ?>/admin/users" class="nav-link <?= str_contains($currentPath,'/admin/users') ? 'active' : '' ?>"><i class="bi bi-people"></i> Người dùng & vai trò</a>
+                        <a href="<?= $baseUrl ?>/admin/groups" class="nav-link <?= str_contains($currentPath,'/admin/groups') ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i> Nhóm kỹ thuật</a>
+                        <a href="<?= $baseUrl ?>/admin/categories" class="nav-link <?= str_contains($currentPath,'/admin/categories') ? 'active' : '' ?>"><i class="bi bi-tags"></i> Danh mục yêu cầu</a>
+                        <a href="<?= $baseUrl ?>/admin/sla" class="nav-link <?= str_contains($currentPath,'/admin/sla') ? 'active' : '' ?>"><i class="bi bi-clock-history"></i> Cấu hình SLA</a>
                         <a href="<?= $baseUrl ?>/admin/permissions" class="nav-link <?= str_contains($currentPath, '/admin/permissions') ? 'active' : '' ?>">
                             <i class="bi bi-shield-lock-fill text-primary"></i> Ma Trận Phân Quyền
                         </a>
                         <a href="<?= $baseUrl ?>/admin/backups" class="nav-link <?= str_contains($currentPath, '/admin/backups') ? 'active' : '' ?>">
                             <i class="bi bi-database-fill-gear text-dark"></i> Sao Lưu &amp; Khôi Phục
                         </a>
+                        <a href="<?= $baseUrl ?>/admin/audit-logs" class="nav-link <?= str_contains($currentPath,'/admin/audit-logs') ? 'active' : '' ?>"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
                     <?php endif; ?>
                 </div>
             </aside>
         <?php endif; ?>
 
         <!-- MAIN APP CONTENT AREA -->
-        <main class="app-main bg-white" style="flex: 1; overflow-y: auto; height: 100%; min-height: 0; padding: 20px 24px;">
+        <main id="tf-main-content" tabindex="-1" class="app-main bg-white" style="flex: 1; overflow-y: auto; height: 100%; min-height: 0; padding: 20px 24px;">
             <!-- FLASH MESSAGES -->
             <?php if (!empty($flashes)): ?>
                 <?php 
@@ -472,6 +489,8 @@ if (isset($project) && !empty($project['id'])) {
         </main>
     </div>
 </div>
+
+<button class="tf-nav-backdrop" id="tf-nav-backdrop" type="button" hidden aria-label="Đóng menu điều hướng"></button>
 
 <?php if (Auth::can('menu.projects') && !empty($allProjects)): ?>
 <!-- ====================================================================

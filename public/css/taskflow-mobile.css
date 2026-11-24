@@ -1,0 +1,157 @@
+/* Phone and tablet presentation, sharing the desktop blue/neutral palette. */
+html { padding: 0; }
+.tf-mobile-app {
+    --app-bg: #f4f7fc; --primary: #1769dc; --primary-soft: #edf4ff;
+    --text-main: #152744; --text-sub: #52627a; --text-muted: #8090a7;
+    --border-card: #e3eaf4; --safe-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--app-bg); font-size: 15px; line-height: 1.6;
+    padding-bottom: calc(96px + var(--safe-bottom));
+    user-select: text; -webkit-user-select: text;
+}
+.tf-mobile-app .app-header {
+    min-height: 68px; padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 12px;
+    background: #fff; border-bottom: 1px solid var(--tf-border); backdrop-filter: none;
+}
+.tf-mobile-app .app-brand { font-size: 19px; letter-spacing: -.6px; gap: 10px; min-width: 0; flex: 1; }
+.tf-mobile-app .app-brand > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tf-mobile-app .brand-icon { background: var(--tf-blue) !important; border-radius: 11px; box-shadow: none; width: 36px; height: 36px; }
+.tf-mobile-app .header-actions { gap: 10px; flex-shrink: 0; }
+.tf-mobile-app .pill-btn-qr { color: var(--tf-blue); background: var(--tf-blue-soft); border: 1px solid #d9e7fb; border-radius: 11px; min-height: 44px; padding: 8px 12px; font-size: 12px; }
+.tf-mobile-app .user-avatar-circle { border: 1px solid #d4e3f9; border-radius: 12px; background: #edf4ff; color: var(--tf-blue); width: 44px; height: 44px; }
+.tf-mobile-app .app-content { max-width: 980px; margin: 0 auto; padding: 20px 20px 16px; animation: none; }
+.tf-mobile-welcome { margin-bottom: 24px; }
+.tf-mobile-welcome .tf-eyebrow { font-size: 12px; color: #7b8ba2; margin: 0 0 5px; }
+.tf-mobile-welcome h1 { font-size: 25px; font-weight: 750; line-height: 1.35; letter-spacing: -.8px; margin-bottom: 8px; }
+.tf-mobile-welcome > p { font-size: 12px; line-height: 1.7; color: #7b8ba2; margin-bottom: 18px; }
+.tf-mobile-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.tf-mobile-metrics button { text-align: left; background: #fff; border: 1px solid var(--tf-border); border-radius: 14px; padding: 14px 12px; color: var(--tf-ink); }
+.tf-mobile-metrics strong { display: block; font-size: 25px; letter-spacing: -.8px; font-weight: 750; line-height: 1.3; }
+.tf-mobile-metrics span { display: block; margin-top: 4px; font-size: 10px; color: #7b8ba2; white-space: nowrap; }
+.tf-mobile-metrics button:first-child { background: var(--tf-blue-soft); border-color: #d8e7fc; }
+.tf-mobile-metrics button:first-child strong { color: var(--tf-blue); }
+.tf-mobile-app .qr-banner-card { margin: 0 0 24px; padding: 16px; min-height: 80px; border: 1px solid var(--tf-border); border-radius: 15px; background: #fff; color: var(--tf-ink); box-shadow: none; }
+.tf-mobile-app .qr-banner-icon { background: var(--tf-blue-soft); color: var(--tf-blue); border-radius: 12px; }
+.tf-mobile-app .qr-banner-title { font-size: 13px; color: var(--tf-ink); }
+.tf-mobile-app .qr-banner-sub { font-size: 10px; color: #8090a7; }
+.tf-mobile-app .qr-banner-pill { background: #edf4ff; color: var(--tf-blue); font-size: 10px; border-radius: 9px; padding: 8px 9px; white-space: nowrap; }
+.tf-mobile-section { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.tf-mobile-section h2 { font-size: 17px; font-weight: 750; letter-spacing: -.3px; margin: 0; }
+.tf-mobile-section p { font-size: 10px; color: #8090a7; margin: 2px 0 0; }
+.tf-mobile-refresh { width: 42px; height: 42px; display: grid; place-items: center; background: #fff; border: 1px solid var(--tf-border); border-radius: 12px; color: #72829a; }
+.tf-mobile-app .soft-search-bar { height: 48px; border-radius: 12px; border-color: var(--tf-border); box-shadow: none; padding: 0 15px; }
+.tf-mobile-app .soft-search-bar input { font-size: 16px; min-width: 0; color: var(--tf-ink); }
+.tf-mobile-app .soft-search-bar input::placeholder { color: #9aa8ba; font-size: 12px; }
+.tf-mobile-app .soft-segmented { background: #eaf0f8; padding: 4px; border-radius: 12px; gap: 3px; margin: 14px 0 20px; }
+.tf-mobile-app .soft-segmented-btn { font-size: 12px; padding: 9px 4px; min-height: 42px; border-radius: 9px; white-space: nowrap; }
+.tf-mobile-app .soft-segmented-btn.active { color: var(--tf-blue); box-shadow: 0 2px 5px #1527440a; background: #fff; }
+.tf-mobile-app .soft-ticket-card { border: 1px solid var(--tf-border); border-radius: 15px; padding: 17px; margin-bottom: 12px; box-shadow: 0 2px 7px #17355d03; transition: border-color .15s; }
+.tf-mobile-app .soft-ticket-card:hover { border-color: #b9d2f5; }
+.tf-mobile-app .soft-ticket-card:active { transform: none; background: #f8fbff; }
+.tf-mobile-app .ticket-row-top { gap: 8px; align-items: flex-start; }
+.tf-mobile-app .ticket-row-top > div { flex-wrap: wrap; min-width: 0; }
+.tf-mobile-app .ticket-code-tag { color: #71819a; background: #f4f7fb; font-size: 11px; padding: 3px 7px; border-radius: 6px; }
+.tf-mobile-app .ticket-item-title { margin: 10px 0; font-size: 15px; font-weight: 650; line-height: 1.6; color: var(--tf-ink); overflow-wrap: anywhere; }
+.tf-mobile-app .ticket-row-bottom { gap: 8px; color: #8090a7; font-size: 11px; }
+.tf-ticket-priority { font-size: 11px; font-weight: 600; }
+.tf-mobile-app .ticket-row-bottom > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tf-mobile-app .ticket-row-bottom > span:last-child { flex-shrink: 0; }
+.tf-mobile-app .status-tag { display: inline-flex; align-items: center; font-size: 11px; padding: 4px 8px; border-radius: 7px; font-weight: 650; flex-shrink: 0; white-space: nowrap; }
+.tf-mobile-app .ticket-row-top .status-tag { max-width: 48%; }
+.tf-mobile-app .tag-progress, .tf-mobile-app .tag-pending { color: #9a650f; background: #fff5dc; }
+.tf-mobile-app .tag-new, .tf-mobile-app .tag-assigned { color: #2165c4; background: #edf4ff; }
+.tf-mobile-app .tag-resolved { color: #21815d; background: #e9f8f1; }
+.tf-mobile-app .tag-closed { color: #748297; background: #f1f4f8; }
+.tf-mobile-app .soft-approval-card { border: 1px solid var(--tf-border); border-radius: 15px; box-shadow: none; padding: 18px; }
+.tf-mobile-app .approval-title-text { font-size: 15px; line-height: 1.6; }
+.tf-mobile-app .approval-desc-box { border-radius: 10px; font-size: 12px; line-height: 1.7; background: #f8fafd; }
+.tf-mobile-app .soft-action-btn { min-height: 44px; border-radius: 10px; font-size: 12px; }
+.tf-mobile-app .soft-bottom-nav { left: 0; right: 0; width: auto; min-height: calc(74px + var(--safe-bottom)); padding: 7px 12px calc(8px + var(--safe-bottom)); background: #fff; border-top: 1px solid var(--tf-border); box-shadow: 0 -6px 20px #15274405; backdrop-filter: none; }
+.tf-mobile-app .nav-item-btn { min-height: 55px; flex: 1; border: 0; background: transparent; color: #8a99af; border-radius: 12px; font-size: 9px; gap: 5px; }
+.tf-mobile-app .nav-item-btn i { font-size: 20px; }
+.tf-mobile-app .nav-item-btn.active { color: var(--tf-blue); background: var(--tf-blue-soft); }
+.tf-mobile-app .nav-center-qr { color: #8a99af !important; }
+.tf-mobile-app .nav-center-qr.active { color: var(--tf-blue) !important; }
+.tf-mobile-app .nav-item-btn.active i { transform: none; }
+.tf-mobile-app .nav-badge-pill { top: 3px; right: 22%; font-size: 8px; min-width: 15px; padding: 2px 4px; }
+.tf-mobile-app .soft-fab { bottom: calc(91px + var(--safe-bottom)); right: 20px; width: 54px; height: 54px; background: var(--tf-blue); border-radius: 17px; box-shadow: 0 7px 18px #1769dc35; }
+.tf-mobile-app .app-header .soft-fab { position: static; width: 44px; height: 44px; border-radius: 12px; box-shadow: none; font-size: 20px; flex-shrink: 0; }
+.tf-mobile-app .modal.bottom-sheet .modal-dialog { max-width: 600px; left: 50%; transform: translateX(-50%); }
+.tf-mobile-app .modal.bottom-sheet .modal-content { border-radius: 23px 23px 0 0; max-height: min(92dvh,calc(var(--tf-visual-height,100dvh) - 12px)); box-shadow: 0 -12px 40px #15274418; border: 1px solid var(--tf-border); }
+.tf-mobile-app .modal-header { padding: 14px 20px !important; flex-shrink: 0; }
+.tf-mobile-app .modal-body { padding: 16px 20px !important; max-height: none !important; overflow-y: auto; min-height: 0; overflow-wrap: anywhere; }
+.tf-mobile-app .modal-footer { padding: 14px 20px !important; flex-shrink: 0; border-top: 1px solid var(--tf-border); }
+.tf-mobile-app .modal-title { font-size: 17px !important; line-height: 1.5 !important; }
+.tf-mobile-app .sheet-drag-pill { width: 42px; height: 4px; margin-bottom: 2px; flex-shrink: 0; }
+.tf-mobile-app .btn-close { min-width: 44px; min-height: 44px; padding: 10px; border-radius: 10px; opacity: .5; }
+.tf-mobile-app .form-control-soft, .tf-mobile-app .form-select, .tf-mobile-app input.form-control { min-height: 48px; font-size: 16px; border-radius: 11px; border-color: var(--tf-border); }
+.tf-mobile-app textarea.form-control-soft { height: auto !important; min-height: 110px; padding: 12px; }
+.tf-mobile-app .btn-soft-primary { min-height: 48px; border-radius: 12px; background: var(--tf-blue); box-shadow: none; }
+.tf-mobile-app .camera-viewport { border: 1px solid var(--tf-border); border-radius: 19px; overflow: hidden; background: #14253e; }
+.tf-mobile-app #screen-profile h6 { font-size: 19px; }
+.tf-mobile-app .camera-laser { animation-duration: 3s; }
+.tf-mobile-app .tf-list-loading { opacity: .6; pointer-events: none; }
+.tf-ticket-list-footer { padding: 8px 0 12px; text-align: center; }
+.tf-ticket-list-footer p { font-size: 11px; color: #8493a9; margin-bottom: 10px; }
+.tf-ticket-list-footer button { background: #fff; border: 1px solid var(--tf-border); border-radius: 12px; min-height: 45px; padding: 10px 25px; color: var(--tf-blue); font-weight: 650; font-size: 12px; }
+.tf-mobile-app.tf-keyboard-open .soft-bottom-nav, .tf-mobile-app.tf-keyboard-open .soft-fab { visibility: hidden; pointer-events: none; }
+.tf-scanner-status { font-size: 12px; color: #73839b; margin: 12px 0; padding: 12px 15px; background: #fff; border: 1px solid var(--tf-border); border-radius: 12px; }
+.tf-scanner-status button { border: 0; color: var(--tf-blue); background: #edf4ff; border-radius: 8px; padding: 7px 12px; margin-left: 8px; }
+.tf-mobile-login { background: #f3f7fd; padding: 0; min-height: 100dvh; }
+.tf-mobile-login .mobile-login-wrapper { max-width: 440px; margin: 0 auto; padding: 36px 22px 24px; }
+.tf-mobile-login .brand-section { margin-bottom: 25px; }
+.tf-mobile-login .brand-icon-box { width: 55px; height: 55px; border-radius: 16px; background: var(--tf-blue); box-shadow: 0 8px 18px #1769dc16; }
+.tf-mobile-login .app-name { font-size: 27px; letter-spacing: -1px; }
+.tf-mobile-login .app-tag { background: var(--tf-blue-soft); color: var(--tf-blue); border: 1px solid #cfdff7; }
+.tf-mobile-login .app-subheading { font-size: 11px; color: #8190a8; }
+.tf-mobile-login .mobile-login-card { border: 1px solid var(--tf-border); border-radius: 20px; padding: 25px 23px; box-shadow: 0 8px 30px #17365606; }
+.tf-mobile-login .login-card-title { font-size: 23px; letter-spacing: -.6px; }
+.tf-mobile-login .login-card-desc { font-size: 12px; line-height: 1.7; margin-bottom: 23px; }
+.tf-mobile-login .mobile-input { min-height: 50px; font-size: 16px; border: 1px solid var(--tf-border); border-radius: 12px; background: #f9fbfe; }
+.tf-mobile-login .mobile-input:focus { border-color: #82b0f2; box-shadow: 0 0 0 4px #1769dc0e; }
+.tf-mobile-login .input-label { font-size: 11px; font-weight: 650; }
+.tf-mobile-login .btn-mobile-login { min-height: 50px; border-radius: 12px; background: var(--tf-blue); box-shadow: 0 6px 14px #1769dc19; }
+.tf-mobile-login .quick-accounts-sec { border-top: 1px solid var(--tf-border); margin-top: 22px; padding-top: 16px; }
+.tf-mobile-login .quick-accounts-sec > summary { list-style-position: inside; font-size: 11px; color: #7f8fa5; padding: 8px 0; cursor: pointer; }
+.tf-mobile-login .quick-chips-grid { margin-top: 12px; }
+.tf-mobile-login .quick-user-chip { border: 1px solid var(--tf-border); border-radius: 12px; box-shadow: none; background: #fff; min-height: 63px; }
+.tf-mobile-login .mobile-footer { font-size: 10px; color: #8b9bb0; margin-top: 24px; }
+@media (min-width: 700px) {
+    .tf-mobile-app .app-header { padding-left: max(24px,calc((100vw - 940px)/2)); padding-right: max(24px,calc((100vw - 940px)/2)); }
+    .tf-mobile-app .app-content { padding: 34px 28px; }
+    .tf-mobile-welcome h1 { font-size: 32px; }
+    .tf-mobile-welcome > p { font-size: 14px; }
+    .tf-mobile-metrics { max-width: 520px; }
+    .tf-mobile-metrics button { padding: 19px; }
+    .tf-mobile-metrics strong { font-size: 31px; }
+    .tf-mobile-metrics span { font-size: 12px; }
+    .tf-mobile-app .qr-banner-card { padding: 20px; }
+    .tf-mobile-app .qr-banner-title { font-size: 16px; }
+    .tf-mobile-app .qr-banner-sub, .tf-mobile-app .qr-banner-pill { font-size: 12px; }
+    .tf-mobile-app #ticketsContainer { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+    .tf-mobile-app .soft-ticket-card { margin-bottom: 0; padding: 22px; }
+    .tf-mobile-app .ticket-item-title { font-size: 15px; }
+    .tf-mobile-app .ticket-row-bottom { font-size: 11px; }
+    .tf-ticket-list-footer, .tf-mobile-app #ticketsContainer > .alert { grid-column: 1/-1; }
+    .tf-mobile-app .soft-bottom-nav { max-width: 620px; margin: 0 auto; bottom: 16px; border: 1px solid var(--tf-border); border-radius: 20px; min-height: 76px; padding-bottom: 7px; box-shadow: 0 8px 28px #15345b12; }
+    .tf-mobile-app .soft-fab { right: max(24px,calc((100vw - 940px)/2)); bottom: 115px; }
+    .tf-mobile-app .modal.bottom-sheet .modal-dialog { bottom: 24px; }
+    .tf-mobile-app .modal.bottom-sheet .modal-content { border-radius: 22px; }
+}
+@media (max-width: 359px) {
+    .tf-mobile-app .app-header { padding-left: 14px; padding-right: 14px; }
+    .tf-mobile-app .app-brand { font-size: 17px; }
+    .tf-mobile-app .pill-btn-qr span { display: none; }
+    .tf-mobile-app .app-content { padding-left: 14px; padding-right: 14px; }
+    .tf-mobile-welcome h1 { font-size: 23px; }
+    .tf-mobile-app .ticket-row-top { flex-wrap: wrap; }
+    .tf-mobile-app .soft-segmented-btn { font-size: 10px; }
+    .tf-mobile-app .qr-banner-pill { padding: 7px; }
+}
+@media (max-width: 699px) {
+    .tf-mobile-app .pill-btn-qr { width: 44px; padding: 8px; justify-content: center; }
+    .tf-mobile-app .pill-btn-qr span { display: none; }
+    .tf-mobile-welcome > p:not(.tf-eyebrow) { display: none; }
+    .tf-mobile-welcome h1 { margin-bottom: 16px; }
+    .tf-mobile-app #screen-tickets > .qr-banner-card { display: none; }
+    .tf-mobile-welcome { margin-bottom: 26px; }
+}

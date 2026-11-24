@@ -11,7 +11,7 @@ $usersList = $allUsers ?? [];
 
 <!-- Title and subtitle -->
 <div class="mb-4">
-    <h2 class="form-heading"><?= __('auth.login_title') ?> 👋</h2>
+    <h2 class="form-heading"><?= __('auth.login_title') ?></h2>
     <p class="form-subheading">
         <?= \App\Core\Language::current() === 'vi' 
             ? 'Vui lòng nhập tài khoản và mật khẩu của bạn để truy cập hệ thống.' 
@@ -83,7 +83,7 @@ $usersList = $allUsers ?? [];
             </label>
         </div>
         <span class="text-muted small" style="font-size: 12px;">
-            <i class="bi bi-shield-check text-success me-1"></i><?= \App\Core\Language::current() === 'vi' ? 'Bảo mật 2FA Sẵn sàng' : '2FA Enabled' ?>
+            <i class="bi bi-shield-check text-primary me-1"></i><?= \App\Core\Language::current() === 'vi' ? 'Không gian làm việc của bạn' : 'Your workspace' ?>
         </span>
     </div>
 
@@ -106,6 +106,8 @@ $usersList = $allUsers ?? [];
 </div>
 
 <!-- Quick Role Demo Selector (Interactive 2x2 Grid) -->
+<details class="tf-demo-access">
+<summary>Chọn tài khoản thử nghiệm</summary>
 <div class="quick-roles-wrap">
     <div class="quick-roles-title">
         <span><i class="bi bi-lightning-fill text-warning me-1"></i> <?= __('auth.quick_login') ?></span>
@@ -177,6 +179,8 @@ $usersList = $allUsers ?? [];
         <i class="bi bi-arrow-right-short fs-5"></i>
     </button>
 </div>
+
+</details>
 
 <!-- =============================================================== -->
 <!-- MODAL: DANH SÁCH TOÀN BỘ TÀI KHOẢN (37 ACCOUNTS) -->

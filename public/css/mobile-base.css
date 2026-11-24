@@ -1,0 +1,627 @@
+:root {
+            --app-bg: #f8fafc;
+            --surface: #ffffff;
+            --primary: #2563eb;
+            --primary-soft: #eff6ff;
+            --primary-border: #bfdbfe;
+            --emerald: #10b981;
+            --emerald-soft: #ecfdf5;
+            --emerald-border: #a7f3d0;
+            --amber: #f59e0b;
+            --amber-soft: #fffbeb;
+            --rose: #ef4444;
+            --rose-soft: #fef2f2;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --text-muted: #94a3b8;
+            --border-soft: #f1f5f9;
+            --border-card: #e2e8f0;
+            --safe-bottom: env(safe-area-inset-bottom, 16px);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--app-bg);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', Roboto, sans-serif;
+            font-size: 15px;
+            line-height: 1.45;
+            -webkit-text-size-adjust: 100%;
+            -webkit-font-smoothing: antialiased;
+            user-select: none;
+            -webkit-user-select: none;
+            padding-bottom: calc(72px + var(--safe-bottom));
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Soft Floating App Bar */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.3px;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Soft Pill Buttons */
+        .pill-btn-qr {
+            background: var(--emerald-soft);
+            color: #047857;
+            border: 1px solid var(--emerald-border);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .pill-btn-qr:active {
+            transform: scale(0.96);
+            background: #d1fae5;
+        }
+
+        .user-avatar-circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid var(--primary-border);
+            cursor: pointer;
+        }
+
+        /* Main Container */
+        .app-content {
+            display: none;
+            padding: 12px 14px;
+            animation: fadeInSoft 0.18s ease-out forwards;
+        }
+
+        .app-content.active {
+            display: block;
+        }
+
+        @keyframes fadeInSoft {
+            from { opacity: 0; transform: translateY(3px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hero QR Scanner Banner */
+        .qr-banner-card {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border-radius: 16px;
+            padding: 14px 16px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            box-shadow: 0 3px 12px rgba(5, 150, 105, 0.2);
+            cursor: pointer;
+            transition: transform 0.12s ease;
+        }
+
+        .qr-banner-card:active {
+            transform: scale(0.98);
+        }
+
+        .qr-banner-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .qr-banner-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .qr-banner-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 1px;
+        }
+
+        .qr-banner-sub {
+            font-size: 0.74rem;
+            opacity: 0.9;
+        }
+
+        .qr-banner-pill {
+            background: #ffffff;
+            color: #047857;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 999px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Soft Segmented Filter */
+        .soft-segmented {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 3px;
+            gap: 3px;
+            margin-bottom: 12px;
+        }
+
+        .soft-segmented-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            border-radius: 9px;
+            padding: 7px 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .soft-segmented-btn.active {
+            background: #ffffff;
+            color: var(--text-main);
+            font-weight: 700;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Search Input */
+        .soft-search-bar {
+            background: #ffffff;
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            height: 42px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .soft-search-bar input {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.88rem;
+            color: var(--text-main);
+            width: 100%;
+        }
+
+        .soft-search-bar input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Soft Ticket Item */
+        .soft-ticket-card {
+            background: #ffffff;
+            border: 1px solid var(--border-soft);
+            border-radius: 14px;
+            padding: 13px 14px;
+            margin-bottom: 9px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .soft-ticket-card:active {
+            transform: scale(0.985);
+            background: #f8fafc;
+        }
+
+        .ticket-row-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .ticket-code-tag {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 0.72rem;
+            color: var(--text-sub);
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        .ticket-item-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.35;
+            margin-bottom: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .ticket-row-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.74rem;
+            color: var(--text-muted);
+        }
+
+        /* Soft Status Pill */
+        .status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .tag-new { background: #dbeafe; color: #1e40af; }
+        .tag-assigned { background: #e0e7ff; color: #3730a3; }
+        .tag-progress { background: #fef3c7; color: #92400e; }
+        .tag-pending { background: #ffedd5; color: #9a3412; }
+        .tag-resolved { background: #dcfce7; color: #166534; }
+        .tag-closed { background: #f1f5f9; color: #475569; }
+
+        /* Approval Card */
+        .soft-approval-card {
+            background: #ffffff;
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 11px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .approval-title-text {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .approval-desc-box {
+            font-size: 0.82rem;
+            color: var(--text-sub);
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .approval-actions-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .soft-action-btn {
+            flex: 1;
+            height: 42px;
+            border-radius: 999px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.12s ease;
+        }
+
+        .soft-action-btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-soft-reject {
+            background: var(--rose-soft);
+            color: var(--rose);
+            border: 1px solid #fee2e2;
+        }
+
+        .btn-soft-approve {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+        }
+
+        /* QR Scanner Camera UI */
+        .camera-viewport {
+            position: relative;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            width: 100%;
+            height: 320px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            margin-bottom: 14px;
+        }
+
+        #qr-reader {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+        }
+
+        #qr-reader video {
+            object-fit: cover !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .camera-reticle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 20px;
+            pointer-events: none;
+            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
+        }
+
+        .camera-reticle::before, .camera-reticle::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-color: #10b981;
+            border-style: solid;
+        }
+
+        .camera-reticle::before {
+            top: -2px;
+            left: -2px;
+            border-width: 3px 0 0 3px;
+            border-top-left-radius: 18px;
+        }
+
+        .camera-reticle::after {
+            bottom: -2px;
+            right: -2px;
+            border-width: 0 3px 3px 0;
+            border-bottom-right-radius: 18px;
+        }
+
+        .camera-laser {
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #10b981, transparent);
+            box-shadow: 0 0 10px #10b981;
+            animation: laserMove 2s infinite ease-in-out alternate;
+        }
+
+        @keyframes laserMove {
+            0% { top: 12%; opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { top: 88%; opacity: 0.3; }
+        }
+
+        /* Soft Floating Bottom Nav */
+        .soft-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: calc(62px + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            z-index: 1050;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+        }
+
+        .nav-item-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.7rem;
+            font-weight: 600;
+            height: 100%;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.15s ease;
+        }
+
+        .nav-item-btn i {
+            font-size: 1.35rem;
+            margin-bottom: 2px;
+            transition: transform 0.15s ease;
+        }
+
+        .nav-item-btn.active {
+            color: var(--primary);
+        }
+
+        .nav-item-btn.active i {
+            transform: translateY(-2px);
+        }
+
+        .nav-badge-pill {
+            position: absolute;
+            top: 7px;
+            right: 25%;
+            background: var(--rose);
+            color: #ffffff;
+            font-size: 0.62rem;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 999px;
+            border: 1.5px solid #ffffff;
+        }
+
+        /* Center QR Scan Nav Pill */
+        .nav-center-qr {
+            color: var(--emerald) !important;
+        }
+
+        .nav-center-qr i {
+            font-size: 1.55rem;
+        }
+
+        /* Floating Action Button (FAB) */
+        .soft-fab {
+            position: fixed;
+            bottom: calc(74px + var(--safe-bottom));
+            right: 16px;
+            width: 52px;
+            height: 52px;
+            border-radius: 26px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.45rem;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            border: none;
+            cursor: pointer;
+            z-index: 1040;
+            transition: transform 0.12s ease;
+        }
+
+        .soft-fab:active {
+            transform: scale(0.92);
+        }
+
+        /* Soft Bottom Sheet */
+        .modal.bottom-sheet .modal-dialog {
+            position: fixed;
+            bottom: 0;
+            margin: 0;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .modal.bottom-sheet .modal-content {
+            border-radius: 24px 24px 0 0;
+            border: none;
+            background: var(--surface);
+            max-height: 88vh;
+            overflow-y: auto;
+            padding-bottom: var(--safe-bottom);
+        }
+
+        .sheet-drag-pill {
+            width: 36px;
+            height: 4px;
+            background-color: #cbd5e1;
+            border-radius: 999px;
+            margin: 10px auto 14px auto;
+        }
+
+        .form-control-soft {
+            height: 44px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid var(--border-card);
+            padding: 0 12px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .form-control-soft:focus {
+            background: #ffffff;
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+        }
+
+        .btn-soft-primary {
+            height: 46px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #ffffff;
+            font-size: 0.92rem;
+            font-weight: 700;
+            border: none;
+            box-shadow: 0 3px 12px rgba(37, 99, 235, 0.25);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: transform 0.12s ease;
+        }
+
+        .btn-soft-primary:active {
+            transform: scale(0.97);
+        }

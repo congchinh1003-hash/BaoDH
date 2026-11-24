@@ -7,3 +7,4 @@ remote/agent/bin
 remote/agent/obj
 remote/agent/artifacts
 remote/relay/node_modules
+tests/ui-artifacts
