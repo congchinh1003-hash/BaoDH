@@ -34,3 +34,8 @@ test('a failed ICE connection falls back even while the data channel still repor
     try{t.attach(t.pc.createDataChannel());t.pc.connectionState='connected';t.channel.onopen();assert.deepEqual(modes,['p2p']);t.pc.connectionState='disconnected';t.pc.onconnectionstatechange();assert.ok(t.ws);t.ws.onmessage({data:JSON.stringify({kind:'ready'})});assert.deepEqual(modes,['p2p','relay']);t.sendFrame(Buffer.from('relay').toString('base64'));assert.ok(t.ws.sent.at(-1) instanceof Uint8Array);}
     finally{t.close();}
 });
+test('relay authentication error closes the peer immediately without waiting for a close handshake',()=>{
+    let message;const t=new Transport({role:'agent',ticket:'bad',relayUrl:'wss://relay',onSignal:()=>{},onError:error=>message=error});
+    t.relay();t.ws.onmessage({data:JSON.stringify({kind:'error',message:'Access denied'})});
+    assert.equal(t.closed,true);assert.equal(message,'Access denied');
+});

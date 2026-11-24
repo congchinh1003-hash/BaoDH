@@ -28,7 +28,8 @@ export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=808
         catch {res.writeHead(400);res.end('Bad request');return;}
         const health=pathname==='/health'||(upstream&&relayPaths.some(prefix=>pathname===prefix+'/health'));
         if(health||!upstream){res.writeHead(health?200:404,{'Content-Type':'text/plain','X-TaskFlow-Revision':revision,'Cache-Control':'no-store',
-            ...(health?{'X-TaskFlow-Connections':String(metrics.connections),'X-TaskFlow-Messages':String(metrics.messages),'X-TaskFlow-Errors':String(metrics.errors),'X-TaskFlow-Last-Error':metrics.lastError}:{})});res.end(health?'ok':'Not found');return;}
+            ...(health?{'X-TaskFlow-Connections':String(metrics.connections),'X-TaskFlow-Messages':String(metrics.messages),'X-TaskFlow-Errors':String(metrics.errors),'X-TaskFlow-Last-Error':metrics.lastError,
+                'X-TaskFlow-Open-Sockets':String([...wss.clients].filter(ws=>ws.readyState===WebSocket.OPEN).length),'X-TaskFlow-Closing-Sockets':String([...wss.clients].filter(ws=>ws.readyState===WebSocket.CLOSING).length)}:{})});res.end(health?'ok':'Not found');return;}
         // Stream PHP/static requests to Apache; WebSocket frames stay in Node.
         const forwarded=http.request({host:upstream.host,port:upstream.port,path:req.url,method:req.method,headers:req.headers},response=>{
             res.writeHead(response.statusCode,response.headers);response.pipe(res);
@@ -76,7 +77,10 @@ export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=808
                 }
                 const room=rooms.get(ws.claims.sid),peer=room?.[ws.claims.role==='agent'?'viewer':'agent'];
                 if(peer?.readyState===WebSocket.OPEN&&peer.claims.exp>Math.floor(Date.now()/1000)&&peer.bufferedAmount<262144)peer.send(data,{binary});
-            } catch {ws.close(4003,'Authentication or protocol rejected');}
+            } catch {
+                if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({kind:'error',message:'Authentication or protocol rejected'}));
+                ws.close(4003,'Authentication or protocol rejected');
+            }
         });
         ws.on('close',()=>{
             clearTimeout(authTimeout);

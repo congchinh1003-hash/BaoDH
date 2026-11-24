@@ -66,6 +66,7 @@
                 if (typeof event.data === 'string') {
                     const msg = JSON.parse(event.data);
                     if (msg.kind === 'ready') { this.ready('relay'); return; }
+                    if (msg.kind === 'error') { this.fail(msg.message || 'Relay authentication rejected.'); return; }
                     if (msg.kind === 'peer_left') {
                         if (!this.directReady()) this.fail('The other participant disconnected.');
                         return;

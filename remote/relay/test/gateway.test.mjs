@@ -41,7 +41,7 @@ test('Render gateway accepts relay WebSocket frames directly and rejects unrelat
     try {
         const base='ws://127.0.0.1:'+gateway.server.address().port;
         const invalid=new WebSocket(base+'/public/login');sockets.push(invalid);const error=once(invalid,'error');assert.match((await error)[0].message,/401/);
-        const anonymous=new WebSocket(base+'/public/remote-support/relay');sockets.push(anonymous);await once(anonymous,'open');const closed=once(anonymous,'close');anonymous.send(JSON.stringify({kind:'auth',token:'invalid-test-ticket'}));assert.equal((await closed)[0],4003);
+        const anonymous=new WebSocket(base+'/public/remote-support/relay');sockets.push(anonymous);await once(anonymous,'open');const closed=once(anonymous,'close'),rejection=once(anonymous,'message');anonymous.send(JSON.stringify({kind:'auth',token:'invalid-test-ticket'}));assert.equal(JSON.parse((await rejection)[0]).kind,'error');assert.equal((await closed)[0],4003);
         const agent=await connect(base+'/public/remote-support/relay','agent');sockets.push(agent);
         const viewer=await connect(base+'/public/remote-support/relay','viewer');sockets.push(viewer);
         await new Promise(resolve=>setTimeout(resolve,20));
