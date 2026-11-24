@@ -20,13 +20,15 @@ export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=808
     if(!tls&&!behindProxy)throw new Error('TLS certificate or an explicitly configured TLS reverse proxy is required');
     if(upstream && (upstream.host!=='127.0.0.1'||!Number.isInteger(upstream.port)||upstream.port<1||upstream.port>65535))throw new Error('HTTP upstream must be a fixed loopback listener');
     const revision=/^[a-f0-9]{40}$/i.test(process.env.RENDER_GIT_COMMIT||'')?process.env.RENDER_GIT_COMMIT:'local';
+    const metrics={connections:0,messages:0,errors:0,lastError:'none'};
     const relayPaths=['/public/remote-support/relay','/remote-support/relay'];
     const handler=(req,res)=>{
         let pathname;
         try {pathname=new URL(req.url,'http://localhost').pathname;}
         catch {res.writeHead(400);res.end('Bad request');return;}
         const health=pathname==='/health'||(upstream&&relayPaths.some(prefix=>pathname===prefix+'/health'));
-        if(health||!upstream){res.writeHead(health?200:404,{'Content-Type':'text/plain','X-TaskFlow-Revision':revision,'Cache-Control':'no-store'});res.end(health?'ok':'Not found');return;}
+        if(health||!upstream){res.writeHead(health?200:404,{'Content-Type':'text/plain','X-TaskFlow-Revision':revision,'Cache-Control':'no-store',
+            ...(health?{'X-TaskFlow-Connections':String(metrics.connections),'X-TaskFlow-Messages':String(metrics.messages),'X-TaskFlow-Errors':String(metrics.errors),'X-TaskFlow-Last-Error':metrics.lastError}:{})});res.end(health?'ok':'Not found');return;}
         // Stream PHP/static requests to Apache; WebSocket frames stay in Node.
         const forwarded=http.request({host:upstream.host,port:upstream.port,path:req.url,method:req.method,headers:req.headers},response=>{
             res.writeHead(response.statusCode,response.headers);response.pipe(res);
@@ -41,10 +43,13 @@ export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=808
     const wss=new WebSocketServer({server,maxPayload:2*1024*1024,perMessageDeflate:false,
         ...(upstream?{verifyClient:info=>{try{return relayPaths.includes(new URL(info.req.url,'http://localhost').pathname.replace(/\/+$/,''));}catch{return false;}}}:{})});
     const rooms=new Map();
+    wss.on('headers',headers=>headers.push('X-TaskFlow-Revision: '+revision));
     wss.on('connection',ws=>{
+        metrics.connections++;
         ws.alive=true;ws.on('pong',()=>{ws.alive=true;});
         const authTimeout=setTimeout(()=>ws.close(4001,'Authentication required'),5000);authTimeout.unref();
         ws.on('message',(data,binary)=>{
+            metrics.messages++;
             try {
                 if(!binary&&data.length<=2048) {
                     const msg=JSON.parse(data.toString());
@@ -81,7 +86,8 @@ export function createRelay({key,tls,behindProxy=false,host='127.0.0.1',port=808
             for(const peer of Object.values(room))if(peer.readyState===WebSocket.OPEN)peer.send(JSON.stringify({kind:'peer_left'}));
             if(!room.agent&&!room.viewer)rooms.delete(ws.claims.sid);
         });
-        ws.on('error',()=>{});
+        ws.on('error',error=>{metrics.errors++;metrics.lastError=String(error.code||'WS_ERROR').replace(/[^A-Z0-9_]/gi,'').slice(0,60);});
+        ws._socket.resume();
     });
     const sweep=setInterval(()=>{
         for(const ws of wss.clients) {
